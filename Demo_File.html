@@ -1,0 +1,767 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>B-Recon | Billing & Reconciliation</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.3)}
+:root{--bg:#0f1115;--p:#171a21;--p2:#1d212a;--b:#2a2f3a;--t:#e7e9ee;--m:#9aa1af;--a:#3b82f6;--g:#22c55e;--w:#f59e0b;--r:#ef4444}*{box-sizing:border-box}body{margin:0;padding:24px;background:var(--bg);color:var(--t);font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:1450px;margin:auto}h1{font-size:21px;margin:0 0 4px}.sub,.help{color:var(--m);font-size:12px}.toolbar,.search{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.grow{flex:1;min-width:220px}button,select,input{font:inherit;border-radius:8px}button{border:0;padding:9px 14px;background:var(--a);color:#fff;cursor:pointer;font-weight:600}button.secondary{background:var(--p2);border:1px solid var(--b)}button.danger{background:#7f1d1d}input,select{background:var(--p2);color:var(--t);border:1px solid var(--b);padding:9px 10px}input:focus,select:focus{outline:0;border-color:var(--a)}.tabs{display:flex;gap:3px;border-bottom:1px solid var(--b);overflow:auto;margin:18px 0}.tab{padding:10px 15px;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;font-weight:600;white-space:nowrap}.tab.active{color:#fff;border-color:var(--a)}.panel{display:none}.panel.active{display:block}.cards,.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card,.gcard,.box{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:14px}.label{color:var(--m);font-size:11px;margin-bottom:6px}.val{font:600 21px Consolas,monospace}.bad{color:var(--r)}.warn{color:var(--w)}.good{color:var(--g)}.gcard{cursor:pointer}.gcard:hover{border-color:var(--a)}.gname{font-weight:700}.gnum{font:600 18px Consolas,monospace;margin-top:6px}.form{position:relative;z-index:40;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:var(--p);border:1px solid var(--b);border-radius:10px;padding:16px;margin-bottom:14px}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:11px;color:var(--m)}.full{grid-column:1/-1}#inote{width:100%;min-width:0}.table{background:var(--p);border:1px solid var(--b);border-radius:10px;overflow:auto}.table table{width:100%;border-collapse:collapse;min-width:950px;font-size:13px}.table th{font-size:10px;text-transform:uppercase;color:var(--m);padding:10px 12px;text-align:left;border-bottom:1px solid var(--b);white-space:nowrap;vertical-align:middle}.table td{padding:10px 12px;border-bottom:1px solid var(--b);vertical-align:middle}.table th:not(:first-child),.table td:not(:first-child){text-align:right}.table th:first-child,.table td:first-child{text-align:left}.num{text-align:right;font-family:Consolas,monospace}.report-table th:not(:first-child),.report-table td:not(:first-child){text-align:right}.report-table th:first-child,.report-table td:first-child{text-align:left}.report-table th:nth-child(1),.report-table td:nth-child(1){width:20%}.report-table th:nth-child(n+2),.report-table td:nth-child(n+2){width:13.33%}#matrixHead th:first-child,#matrixReport td:first-child{width:18%;text-align:left}#matrixHead th:not(:first-child),#matrixReport td:not(:first-child){text-align:right}.badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700}.paid{background:#14351f;color:var(--g)}.partial{background:#3b2b08;color:var(--w)}.pending{background:#421b1b;color:var(--r)}.credit-note{background:#33205c;color:#c4b5fd}.grp{background:#132c4b;color:#60a5fa}.empty{text-align:center;color:var(--m);padding:35px}.file{display:none}.toast{position:fixed;right:20px;bottom:20px;background:var(--p2);border:1px solid var(--b);padding:11px 15px;border-radius:8px;opacity:0;transition:.2s}.toast.show{opacity:1}
+.invoice-modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;z-index:9998;padding:20px}
+.invoice-modal.show{display:flex}
+.invoice-modal-card{width:min(900px,96vw);max-height:88vh;overflow:auto;background:var(--p);border:1px solid var(--b);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.invoice-modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--b);position:sticky;top:0;background:var(--p);z-index:2}
+.invoice-modal-body{padding:16px 18px}
+.invoice-edit-form{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:600px){.invoice-edit-form{grid-template-columns:1fr}}
+@media(max-width:900px){.cards,.groups{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){body{padding:12px}.cards,.groups,.form{grid-template-columns:1fr}}
+
+.workspace-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#151922,#1a1f2a);border:1px solid var(--b);border-radius:12px;padding:10px;margin:0 0 16px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.workspace-label{color:var(--m);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-right:4px}.workspace-btn{background:transparent!important;border:1px solid var(--b)!important;color:var(--m)!important;padding:8px 14px!important}.workspace-btn.active{background:var(--a)!important;border-color:var(--a)!important;color:#fff!important}.workspace-btn:hover{border-color:var(--a)!important;color:#fff!important}.brand{display:flex;align-items:center;gap:12px;margin-bottom:2px}.brand-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#6366f1);display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 6px 20px rgba(59,130,246,.25)}.hero{background:linear-gradient(135deg,#171b24,#12151c);border:1px solid var(--b);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(0,0,0,.18)}.hero-title{font-size:18px;font-weight:750}.hero-sub{color:var(--m);font-size:12px;margin-top:4px}.section-head{display:flex;justify-content:space-between;align-items:end;margin:20px 0 9px}.section-head h3{margin:0}.gcard.active{border-color:var(--a);box-shadow:0 0 0 1px rgba(59,130,246,.25),0 8px 25px rgba(0,0,0,.15)}
+.quick-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}.quick-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px}.quick-card .qv{font-family:var(--mono);font-size:18px;font-weight:700;margin-top:4px}.alloc-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.alloc-tools input{flex:1;min-width:240px}.alloc-row2{display:grid;grid-template-columns:34px minmax(170px,1.6fr) minmax(105px,1fr) minmax(115px,1fr) minmax(85px,1fr) minmax(105px,1fr) minmax(105px,1fr) minmax(105px,1fr) minmax(95px,1fr) minmax(120px,1.15fr) minmax(105px,1fr);gap:8px;align-items:center;padding:9px 8px;border-bottom:1px solid var(--border)}.alloc-row2.header{color:var(--text2);font-size:11px;text-transform:uppercase;font-weight:600}.alloc-row2:hover{background:rgba(255,255,255,.025)}.alloc-row2 input[type=number]{width:100%}.alloc-row2.suggest{background:rgba(59,130,246,.08);border-left:3px solid var(--accent)}@media(max-width:900px){.quick-summary{grid-template-columns:repeat(2,1fr)}.alloc-row2{grid-template-columns:30px 1.5fr 1fr 1fr 1fr 1fr 1.2fr}}.payment-modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}.payment-modal.show{display:flex}.payment-modal-card{width:min(900px,96vw);max-height:85vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.45)}.payment-modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--panel);z-index:2}.payment-modal-body{padding:16px 18px}.payment-detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.payment-detail-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px}.payment-detail-card .label{font-size:11px;color:var(--text2)}.payment-detail-card .value{font-family:var(--mono);font-weight:700;margin-top:4px}.payment-invoice-table{width:100%;border-collapse:collapse}.payment-invoice-table th,.payment-invoice-table td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left}.payment-invoice-table th:not(:first-child),.payment-invoice-table td:not(:first-child){text-align:right}@media(max-width:800px){.payment-detail-grid{grid-template-columns:repeat(2,1fr)}}
+<style>
+.alloc-suggestions{margin:8px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
+.alloc-suggestions .label{margin-bottom:7px}
+.suggestion-chip{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin:5px 0;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:inherit;cursor:pointer}
+.suggestion-chip span{opacity:.75;font-size:12px}
+.suggestion-chip:hover{border-color:var(--accent)}
+.payment-picker{position:relative;z-index:50}.payment-picker input{width:100%;box-sizing:border-box}.payment-results{display:none;position:absolute;z-index:99999;left:0;right:0;top:calc(100% + 6px);max-height:360px;overflow:auto;background:var(--p);border:1px solid var(--b);border-radius:10px;box-shadow:0 18px 40px rgba(0,0,0,.65);padding:6px}.payment-picker.open .payment-results{display:block}.payment-result{display:block;width:100%;text-align:left;background:var(--p);border:0;border-radius:8px;padding:11px 13px;color:var(--t);cursor:pointer}.payment-result:hover{background:var(--p2)}.payment-result .pr-main{font-weight:700;color:var(--t)}.payment-result .pr-sub{font-size:12px;color:var(--m);margin-top:4px}</style>
+</style></head><body><div class="wrap">
+<div style="background:linear-gradient(135deg,#3b2b08,#171a21);border:1px solid var(--w);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:12.5px"><span style="font-size:16px">🔒</span><div><b style="color:var(--w)">Demo Preview</b><span style="color:var(--m)"> · Sample data for illustration. All actions are live to click, but nothing here can actually change, save, import or export data.</span></div></div>
+<div class="brand"><div class="brand-mark">B</div><div><h1>B-Recon</h1><div class="sub">Billing &amp; Reconciliation <span id="sub">• Loading...</span></div></div></div>
+<div class="toolbar"><span class="grow"></span><button class="secondary" disabled title="Disabled in demo preview" onclick="backup()">Export Backup</button><button class="secondary" disabled title="Disabled in demo preview" onclick="exportAllData()">Export All Data CSV</button><button class="secondary" disabled title="Disabled in demo preview" onclick="document.getElementById('restore').click()">Restore Backup</button><input id="restore" class="file" type="file" accept=".json" onchange="restore(event)"></div>
+<div class="tabs"><div class="tab active" data-p="dash">Dashboard</div><div class="tab" data-p="reports">Reports</div><div class="tab" data-p="inv">Invoices</div><div class="tab" data-p="pay">Payments</div><div class="tab" data-p="alloc">Allocate</div><div class="tab" data-p="import">Excel Import</div><div class="tab" data-p="settings">Groups & Settings</div></div>
+<div id="workspaceBar" class="workspace-bar"></div>
+<section id="dash" class="panel active"><div class="hero"><div class="hero-title" id="heroTitle">All Groups Overview</div><div class="hero-sub" id="heroSub">Select Orion Group, Vertex Group or another group above to open its dedicated workspace.</div></div><div class="search"><input id="q" class="grow" placeholder="Search invoice, group, client, state..." oninput="render()"><select id="dg" onchange="render()"></select><select id="ds" onchange="render()"><option value="">All Statuses</option><option>pending</option><option>partial</option><option>paid</option><option>gst-hold</option><option>penalty</option><option>short-payment</option></select><button class="secondary" onclick="q.value='';dg.value='';ds.value='';activeGroup='';render()">Clear</button></div><div id="cards" class="cards"></div><h3>Client Groups</h3><div id="groups" class="groups"></div><h3>Invoices <span id="count" class="sub"></span></h3><div class="table"><table><thead><tr><th>Invoice</th><th>Group</th><th>Client</th><th>State</th><th>Date</th><th>Basic</th><th>GST</th><th>Total</th><th>Status</th><th>Outstanding</th></tr></thead><tbody id="dt"></tbody></table></div></section>
+
+<section id="reports" class="panel"><div class="hero"><div class="hero-title">Outstanding & GST Reports</div><div class="hero-sub">Accurate report from invoice totals minus allocated payments. Filter by Group, Year, State and Month.</div></div><div class="form"><div class="field"><label>Year</label><select id="ry" onchange="renderReports()"></select></div><div class="field"><label>State</label><select id="rs" onchange="renderReports()"></select></div><div class="field"><label>Month</label><select id="rm" onchange="renderReports()"><option value="">All Months</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div><div class="field"><label>Report View</label><select id="rv" onchange="applyReportView()"><option value="">All Reports</option><option value="month">Month-wise</option><option value="state">State-wise</option><option value="client">Client-wise</option><option value="matrix">State × Month Matrix</option></select></div></div><div id="reportCards" class="cards"></div><div id="monthBlock"><div class="section-head"><h3>Month-wise Outstanding</h3><button class="secondary" disabled title="Disabled in demo preview" onclick="exportReport('month')">Export CSV</button></div><div class="table"><table class="report-table"><thead><tr><th>Month</th><th>Invoices</th><th>Pending Invoices</th><th>Invoice Value</th><th>Received</th><th>TDS</th><th>Credit Note</th><th>Outstanding</th><th>GST Pending</th></tr></thead><tbody id="monthReport"></tbody></table></div></div><div id="stateBlock"><div class="section-head"><h3>State-wise Outstanding</h3><button class="secondary" disabled title="Disabled in demo preview" onclick="exportReport('state')">Export CSV</button></div><div class="table"><table class="report-table"><thead><tr><th>State</th><th>Invoices</th><th>Pending Invoices</th><th>Invoice Value</th><th>Received</th><th>TDS</th><th>Credit Note</th><th>Outstanding</th><th>GST Pending</th></tr></thead><tbody id="stateReport"></tbody></table></div></div><div id="clientBlock"><div class="section-head"><h3>Client-wise Outstanding</h3><button class="secondary" disabled title="Disabled in demo preview" onclick="exportReport('client')">Export CSV</button></div><div class="table"><table class="report-table"><thead><tr><th>Client</th><th>Invoices</th><th>Pending Invoices</th><th>Invoice Value</th><th>Received</th><th>TDS</th><th>Credit Note</th><th>Outstanding</th><th>GST Pending</th></tr></thead><tbody id="clientReport"></tbody></table></div></div><div id="matrixBlock"><div class="section-head"><h3>State × Month Outstanding Matrix</h3><button class="secondary" disabled title="Disabled in demo preview" onclick="exportReport('matrix')">Export CSV</button></div><div class="table"><table class="report-table"><thead id="matrixHead"></thead><tbody id="matrixReport"></tbody></table></div></div></section>
+
+<section id="inv" class="panel"><div class="form"><div class="field"><label>Invoice No *</label><input id="ino"></div><div class="field"><label>Group *</label><select id="ig"></select></div><div class="field"><label>Client *</label><input id="icl"></div><div class="field"><label>State</label><input id="ist"></div><div class="field"><label>Date</label><input id="idate" type="date"></div><div class="field"><label>Basic Invoice Value (₹)</label><input id="iamt" type="number"></div><div class="field"><label>GST Amount (₹)</label><input id="igst" type="number" value="0"></div><div class="field"><label>Total Invoice Value (₹)</label><input id="itotal" type="number" value="0"></div><div class="field"><label>Credit Note Amount (₹)</label><input id="icn" type="number" value="0" min="0" step="0.01"></div><div class="full"><label>Notes</label><input id="inote" class="grow"></div><div class="full"><button onclick="addInv()">Add Invoice</button></div></div><div class="search"><input id="iq" class="grow" placeholder="Search invoices..." oninput="render()"><select id="if" onchange="render()"></select><button class="secondary" onclick="selectAllInvoices()">Select Visible</button><button class="secondary" onclick="clearInvoiceSelection()">Clear Selection</button><button onclick="deleteSelectedInvoices()">Delete Selected</button></div><div class="box"><div class="search" style="margin:0"><input id="invoiceCheck" class="grow" placeholder="Check invoice status — enter invoice number..." oninput="checkInvoiceStatus()"><button class="secondary" onclick="checkInvoiceStatus()">Check Invoice</button></div><div id="invoiceCheckResult" class="help" style="margin-top:10px">Enter an invoice number to see payment, GST Hold, TDS, credit note, penalty, short payment, outstanding and payment reference.</div></div><div class="table"><table><thead><tr><th><input type="checkbox" id="selectAllInvoices" onchange="toggleAllInvoices(this.checked)"></th><th>Invoice</th><th>Group</th><th>Client</th><th>State</th><th>Date</th><th>Basic</th><th>GST</th><th>Total</th><th>Status</th><th>Outstanding</th><th></th></tr></thead><tbody id="it"></tbody></table></div></section>
+
+<section id="pay" class="panel"><div class="form"><div class="field"><label>Payment Ref *</label><input id="pid"></div><div class="field"><label>Group *</label><select id="pg"></select></div><div class="field"><label>Client</label><input id="pcl"></div><div class="field"><label>Date</label><input id="pdate" type="date"></div><div class="field"><label>Amount (₹)</label><input id="pamt" type="number"></div><div class="field"><label>Type</label><select id="ptype"><option>Normal Payment</option><option>GST Release</option><option>GST Hold</option><option>TDS</option><option>Credit Note</option><option>Penalty Waiver</option><option>Penalty</option><option>Short Payment</option><option>Other</option></select></div><div class="full"><label>Notes</label><input id="pnote" class="grow"></div><div class="full"><button onclick="addPay()">Add Payment</button></div></div><div class="search"><input id="pq" class="grow" placeholder="Search payments..." oninput="render()"><select id="pf" onchange="render()"></select><button id="togglePaymentListBtn" class="secondary" onclick="togglePaymentSection()">Hide Payments</button></div><div id="paymentListTable" class="table"><table><thead><tr><th>Ref</th><th>Group</th><th>Client</th><th>Date</th><th>Type</th><th>Amount Received</th><th>Allocated</th><th>Unallocated</th><th>TDS</th><th>Status</th><th></th></tr></thead><tbody id="pt"></tbody></table></div><div class="box" style="margin-top:14px"><div class="section-head" style="margin-top:0"><h3>Invoice Payment History</h3><div style="display:flex;gap:8px;align-items:center"><button id="togglePaymentHistoryBtn" class="secondary" onclick="togglePaymentHistory()">Hide History</button><button class="secondary" disabled title="Disabled in demo preview" onclick="exportPaymentHistoryXlsx()">Export Excel</button></div></div><p class="help">One row per invoice-payment allocation. Use this to see exactly <b>which invoice received payment on which date</b>, including GST Release, GST Hold, TDS, Credit Note, Penalty and Short Payment. Leave Invoice No blank to export all invoices; enter multiple invoice numbers separated by comma.</p><div class="search" style="margin-bottom:0"><input id="phInv" class="grow" placeholder="Invoice No(s) — e.g. INV-1001, INV-1002" oninput="renderPaymentHistory()"><select id="phType" onchange="renderPaymentHistory()"><option value="">All Transaction Types</option><option>Normal Payment</option><option>GST Release</option><option>GST Hold</option><option>TDS</option><option>Credit Note</option><option>Penalty Waiver</option><option>Penalty</option><option>Short Payment</option><option>Other</option></select><input id="phFrom" type="date" title="From Date" onchange="renderPaymentHistory()"><input id="phTo" type="date" title="To Date" onchange="renderPaymentHistory()"></div><div id="paymentHistoryTable" class="table" style="margin-top:12px"><table><thead><tr><th>Invoice</th><th>Group</th><th>Client</th><th>Payment Ref</th><th>Payment Date</th><th>Transaction Breakdown</th><th>Cash Received</th><th>Outstanding</th><th>Status</th></tr></thead><tbody id="phRows"></tbody></table></div></div></section>
+
+<section id="alloc" class="panel"><div class="hero"><div class="hero-title">Quick Allocate</div><div class="hero-sub">Select a payment, search invoices, tick the invoices covered by the payment, then auto-distribute the received amount. Designed for fast daily reconciliation.</div></div><div class="form" style="grid-template-columns:1fr"><div class="field"><label>Select Payment to Allocate</label><div id="paymentPicker" class="payment-picker"><input id="paymentSearch" class="grow" autocomplete="off" placeholder="Click here to search payment reference, client, date or type..."><div id="paymentResults" class="payment-results"></div></div><select id="ap" style="display:none" onchange="allocForm()"></select></div></div><div id="aa"></div></section>
+
+<section id="import" class="panel"><div class="box"><h3>Excel / CSV Invoice Import</h3><p class="help">Upload your invoice Excel. <b>Group is NOT required in the Excel.</b> Select the Group once below and every new invoice from this file will be saved under that group. Existing invoice numbers are updated automatically instead of creating duplicates. If an invoice already exists, the uploaded Basic/GST/Total/Client/State/Date values replace the existing values when those columns are present.</p><div class="toolbar"><label style="color:var(--text2);font-size:12px">Import Group</label><select id="defg"></select><button onclick="document.getElementById('xlsx').click()">Choose Excel / CSV</button><button class="secondary" disabled title="Disabled in demo preview" onclick="downloadTemplate()">Download Excel Template</button><input id="xlsx" class="file" type="file" accept=".xlsx,.xls,.csv" onchange="importFile(event)"></div><div id="ir" class="help"></div></div><div class="box"><h3>Excel Payment Import</h3><p class="help">Upload the bank/payment Excel. <b>Group is NOT required in the Excel.</b> Select the Group once below. Payment Ref is the unique key. Repeat the same Payment Ref across invoice rows; the system creates one payment only and automatically updates/allocates the existing payment against those invoice numbers. Payment Amount means the NET amount actually received in bank after TDS. Use TDS for the amount deducted at source, GST Hold for an amount withheld, and GST Release when a previously held GST amount is released against that Invoice No. Penalty and Short Payment classify other invoice-side differences.</p><div class="toolbar"><label style="color:var(--text2);font-size:12px">Payment Group</label><select id="payDefg"></select><button onclick="document.getElementById('payxlsx').click()">Choose Payment Excel / CSV</button><button class="secondary" disabled title="Disabled in demo preview" onclick="downloadPaymentTemplate()">Download Payment Template</button><input id="payxlsx" class="file" type="file" accept=".xlsx,.xls,.csv" onchange="importPayments(event)"></div><div id="pir" class="help"></div></div><div class="box"><b>Demo Preview</b><p class="help">This is a sample build for demonstration. Export and backup buttons are disabled here; all other tabs and forms are fully browsable.</p></div></section>
+
+<section id="settings" class="panel"><div class="form"><div class="field"><label>New Group</label><input id="ng" placeholder="e.g. Tata"></div><div class="field" style="justify-content:end"><button onclick="addGroup()">Add Group</button></div></div><div class="table"><table><thead><tr><th>Group</th><th>Invoices</th><th>Payments</th><th>Action</th></tr></thead><tbody id="gt"></tbody></table></div></section>
+</div><div id="toast" class="toast"></div>
+
+<script>
+const DB='recon_tracker_v3',STORE='state';let activeGroup='';let db;
+const DEMO_LOCK=true;
+const DEMO_INVOICES=[
+{no:'INV-2401',group:'Orion Group',client:'Orion Textiles Ltd',state:'Maharashtra',date:'2026-04-05',basic:500000,gst:90000,total:590000,creditNote:0,penalty:0,notes:'April dispatch'},
+{no:'INV-2402',group:'Orion Group',client:'Orion Auto Components',state:'Jharkhand',date:'2026-05-02',basic:750000,gst:135000,total:885000,creditNote:0,penalty:0,notes:'May supply'},
+{no:'INV-2403',group:'Orion Group',client:'Orion Textiles Ltd',state:'Maharashtra',date:'2026-06-14',basic:275000,gst:49500,total:324500,creditNote:15000,penalty:0,notes:'Return adjustment via credit note'},
+{no:'INV-2404',group:'Orion Group',client:'Orion Energy Pvt Ltd',state:'Maharashtra',date:'2026-07-08',basic:180000,gst:32400,total:212400,creditNote:0,penalty:0,notes:'Pending — awaiting payment'},
+{no:'INV-3401',group:'Vertex Group',client:'Vertex Logistics',state:'Gujarat',date:'2026-05-10',basic:410000,gst:73800,total:483800,creditNote:0,penalty:0,notes:'GST held by client'},
+{no:'INV-3402',group:'Vertex Group',client:'Vertex Power Pvt Ltd',state:'Gujarat',date:'2026-05-22',basic:280000,gst:50400,total:330400,creditNote:0,penalty:0,notes:''},
+{no:'INV-3403',group:'Vertex Group',client:'Vertex Green Energy',state:'Rajasthan',date:'2026-06-20',basic:620000,gst:111600,total:731600,creditNote:0,penalty:8000,notes:'Late delivery penalty applied'},
+{no:'INV-4401',group:'Other',client:'Nimbus Retail Pvt Ltd',state:'Delhi',date:'2026-06-14',basic:195000,gst:35100,total:230100,creditNote:0,penalty:0,notes:''},
+{no:'INV-4402',group:'Other',client:'Nimbus Tech Solutions',state:'Karnataka',date:'2026-07-10',basic:340000,gst:61200,total:401200,creditNote:0,penalty:0,notes:'Short payment — under query'}
+];
+const DEMO_PAYMENTS=[
+{id:'PAY-9001',group:'Orion Group',client:'Orion Textiles Ltd',date:'2026-04-20',amount:590000,type:'Normal Payment',notes:'Full settlement',suggestedInvoices:[]},
+{id:'PAY-9002',group:'Orion Group',client:'Orion Auto Components',date:'2026-05-20',amount:860000,type:'Normal Payment',notes:'TDS deducted at source',suggestedInvoices:[]},
+{id:'PAY-9003',group:'Orion Group',client:'Orion Textiles Ltd',date:'2026-07-25',amount:309500,type:'Normal Payment',notes:'Net of credit note',suggestedInvoices:[]},
+{id:'PAY-9101',group:'Vertex Group',client:'Vertex Logistics',date:'2026-05-28',amount:410000,type:'Normal Payment',notes:'GST portion held back',suggestedInvoices:[]},
+{id:'PAY-9102',group:'Vertex Group',client:'Vertex Power Pvt Ltd',date:'2026-06-10',amount:330400,type:'Normal Payment',notes:'Full settlement',suggestedInvoices:[]},
+{id:'PAY-9103',group:'Vertex Group',client:'Vertex Green Energy',date:'2026-06-25',amount:723600,type:'Normal Payment',notes:'Penalty deducted for delayed delivery',suggestedInvoices:[]},
+{id:'PAY-9201',group:'Other',client:'Nimbus Retail Pvt Ltd',date:'2026-07-01',amount:230100,type:'Normal Payment',notes:'Full settlement',suggestedInvoices:[]},
+{id:'PAY-9202',group:'Other',client:'Nimbus Tech Solutions',date:'2026-07-15',amount:250000,type:'Normal Payment',notes:'Partial — balance under short payment query',suggestedInvoices:[]}
+];
+const DEMO_ALLOCATIONS=[
+{paymentId:'PAY-9001',invoiceNo:'INV-2401',group:'Orion Group',amount:590000,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0},
+{paymentId:'PAY-9002',invoiceNo:'INV-2402',group:'Orion Group',amount:860000,tds:25000,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0},
+{paymentId:'PAY-9003',invoiceNo:'INV-2403',group:'Orion Group',amount:309500,tds:0,gstHold:0,gstRelease:0,creditNote:15000,penalty:0,shortPayment:0},
+{paymentId:'PAY-9101',invoiceNo:'INV-3401',group:'Vertex Group',amount:410000,tds:0,gstHold:73800,gstRelease:0,creditNote:0,penalty:0,shortPayment:0},
+{paymentId:'PAY-9102',invoiceNo:'INV-3402',group:'Vertex Group',amount:330400,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0},
+{paymentId:'PAY-9103',invoiceNo:'INV-3403',group:'Vertex Group',amount:723600,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:8000,shortPayment:0},
+{paymentId:'PAY-9201',invoiceNo:'INV-4401',group:'Other',amount:230100,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0},
+{paymentId:'PAY-9202',invoiceNo:'INV-4402',group:'Other',amount:250000,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0}
+];
+function demoBlock(){if(DEMO_LOCK){toast('🔒 Demo Preview — this action is disabled here.');return true}return false}
+let state={version:4,groups:['Orion Group','Vertex Group','Other'],invoices:DEMO_INVOICES.map(i=>({...i})),payments:DEMO_PAYMENTS.map(p=>({...p})),allocations:DEMO_ALLOCATIONS.map(a=>({...a}))};
+const $=id=>document.getElementById(id),n=x=>Number(String(x??'').replace(/[₹,\s]/g,''))||0,fmt=x=>'₹'+n(x).toLocaleString('en-IN',{maximumFractionDigits:2});
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(x){$('toast').textContent=x;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1800)}
+function openDB(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>no(r.error)})}
+function getDB(){return new Promise((ok,no)=>{let r=db.transaction(STORE,'readonly').objectStore(STORE).get('data');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+function putDB(){return new Promise((ok,no)=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).put(state,'data');r.onsuccess=ok;r.onerror=()=>no(r.error)})}
+async function save(msg='Saved'){try{await putDB()}catch(e){}try{localStorage.setItem('recon_recovery',JSON.stringify(state))}catch(e){}updateSub();if(msg)toast(msg)}
+function normalizeInvoice(i){if(!i)return i;i.basic=n(i.basic!=null?i.basic:i.amount);i.gst=n(i.gst);i.total=n(i.total)||i.basic+i.gst;i.creditNote=n(i.creditNote);i.penalty=n(i.penalty);if(!i.billMonth&&i.date){let d=String(i.date);if(/^\d{4}-\d{2}/.test(d))i.billMonth=d.slice(0,7)}return i}
+function monthVal(v,fallbackDate=''){if(v==null||String(v).trim()==='')return fallbackDate?monthVal(fallbackDate,''):'';if(v instanceof Date&&!isNaN(v.getTime())){let ly=v.getFullYear(),lm=v.getMonth()+1,uy=v.getUTCFullYear(),um=v.getUTCMonth()+1;return `${ly}-${String(lm).padStart(2,'0')}`;}if(typeof v==='number'&&window.XLSX){let d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,'0')}`}let s=String(v).trim(),m=s.match(/^(\d{4})[-\/](\d{1,2})(?:[-\/]\d{1,2})?$/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}`;m=s.match(/^(\d{1,2})[-\/]?(\d{4})$/);if(m)return `${m[2]}-${m[1].padStart(2,'0')}`;m=s.match(/^([A-Za-z]{3,9})[\s-]+(\d{2,4})$/);if(m){let names=['january','february','march','april','may','june','july','august','september','october','november','december'],idx=names.findIndex(x=>x.startsWith(m[1].toLowerCase()));if(idx>=0){let y=m[2].length===2?'20'+m[2]:m[2];return `${y}-${String(idx+1).padStart(2,'0')}`}}return fallbackDate?String(fallbackDate).slice(0,7):''}
+function invoiceTotal(i){normalizeInvoice(i);return n(i.total)||n(i.basic)+n(i.gst)}
+function normKey(v){return String(v??'').trim().toLowerCase().replace(/\s+/g,'')}
+function sameGroup(a,b){return normKey(a)===normKey(b)}
+function findInvoice(no,group){return state.invoices.find(i=>normKey(i.no)===normKey(no)&&sameGroup(i.group,group))}
+function ensure(g){g=(g||'Other').trim()||'Other';if(!state.groups.includes(g))state.groups.push(g);return g}
+function opts(all=false,sel=''){return (all?'<option value="">All Groups</option>':'<option value="">Select Group</option>')+state.groups.map(g=>`<option ${g==sel?'selected':''}>${esc(g)}</option>`).join('')}
+function controls(){['ig','pg','defg','payDefg'].forEach(id=>{let el=$(id);if(el)el.innerHTML=opts(false,state.groups[0])});['dg','if','pf'].forEach(id=>{let el=$(id);if(el)el.innerHTML=opts(true)});renderReportFilters()}
+function fmtRaw(x){return n(x).toFixed(2)}
+function paymentTDS(id){return paymentAllocations(id).reduce((s,a)=>s+n(a.tds),0)}
+function paymentAllocations(id){return state.allocations.filter(a=>a.paymentId===id)}
+function validPaymentAllocations(id){let p=state.payments.find(x=>x.id===id);if(!p)return[];return paymentAllocations(id).filter(a=>{let inv=state.invoices.find(i=>normKey(i.no)===normKey(a.invoiceNo)&&sameGroup(i.group,p.group));return !!inv})}
+function pm(id){let p=state.payments.find(x=>x.id===id);if(!p)return{allocated:0,unallocated:0,rows:[]};let rows=validPaymentAllocations(id),allocated=rows.reduce((s,a)=>s+n(a.amount)+n(a.gstRelease),0);return{allocated,unallocated:Math.max(0,n(p.amount)-allocated),rows}}
+function invoiceMap(no,group){
+  // Single source of truth for invoice lookup (normalized no+group match).
+  // Both invoiceMap() and im() used to do this find() separately, with im()
+  // using a slightly different (non-normalized) match — that mismatch is a
+  // latent bug risk, and the double lookup + double invoiceTotal() call was
+  // pure overhead on every row render. Now looked up once and reused.
+  let i=state.invoices.find(x=>normKey(x.no)===normKey(no)&&(!group||sameGroup(x.group,group)));
+  if(!i)return{cash:0,received:0,tds:0,gstHold:0,gstHoldRaw:0,gstRelease:0,creditNote:0,creditNoteRows:0,penalty:0,shortPayment:0,shortPaymentRaw:0,covered:0,outstanding:0,status:'pending',rows:[],invoice:null,total:0};
+  let rows=state.allocations.filter(a=>normKey(a.invoiceNo)===normKey(no)&&(n(a.amount)>0.009||n(a.tds)>0.009||n(a.gstHold)>0.009||n(a.gstRelease)>0.009||n(a.creditNote)>0.009||n(a.penalty)>0.009||n(a.shortPayment)>0.009)&&(()=>{let p=state.payments.find(x=>x.id===a.paymentId);return (n(p?.amount)>0.009||n(a.gstRelease)>0.009||n(a.creditNote)>0.009)&&(!group||sameGroup(p?.group,group)||sameGroup(a.group,group))})()),cash=0,tds=0,gstHoldRaw=0,gstRelease=0,creditNoteRows=0,penalty=0,shortPaymentRaw=0;
+  rows.forEach(a=>{cash+=n(a.amount);tds+=n(a.tds);gstHoldRaw+=n(a.gstHold);gstRelease+=n(a.gstRelease);creditNoteRows+=n(a.creditNote);penalty+=n(a.penalty);shortPaymentRaw+=n(a.shortPayment)});
+  let gstHold=Math.max(0,gstHoldRaw-gstRelease),invoiceCreditNote=Math.max(0,n(i.creditNote)),creditNote=Math.min(invoiceTotal(i),Math.max(invoiceCreditNote,creditNoteRows)),creditNoteAppliedToShort=Math.min(creditNote,shortPaymentRaw),shortPayment=Math.max(0,shortPaymentRaw-creditNoteAppliedToShort),total=invoiceTotal(i),received=Math.min(total,Math.max(0,cash+gstRelease)),covered=Math.min(total,Math.max(0,cash+gstRelease+tds+creditNote+penalty)),outstanding=Math.max(0,total-covered),status=outstanding<=0?'paid':(received>0.009?'partial':'pending');
+  return{cash,received,tds,gstHold,gstHoldRaw,gstRelease,creditNote,creditNoteRows,penalty,shortPayment,shortPaymentRaw,covered,outstanding,status,rows,invoice:i,total};
+}
+// im() is now a pure aliasing layer over invoiceMap() — same return shape/keys
+// as before (so every existing caller keeps working unchanged), but it no
+// longer re-finds the invoice or recomputes the total itself.
+function im(no,group){let x=invoiceMap(no,group),i=x.invoice;return{allocated:x.cash,received:x.received,outstanding:x.outstanding,tds:x.tds,gst:x.gstHold,gstRelease:x.gstRelease,creditNote:x.creditNote,penalty:Math.max(0,n(i?.penalty)-x.penalty),status:x.status,total:x.total,cash:x.cash,gstHold:x.gstHold,gstHoldRaw:x.gstHoldRaw,gstRelease:x.gstRelease,creditNoteAmount:x.creditNote,penaltyPaid:x.penalty,shortPayment:x.shortPayment}}
+function paymentStatus(p){if(!p)return'unallocated';let rows=validPaymentAllocations(p.id),allocated=rows.reduce((s,a)=>s+n(a.amount)+n(a.gstRelease),0),received=n(p.amount);if(received<=0.009)return allocated>0?'verify':'unallocated';if(allocated<=0.009)return'unallocated';if(Math.abs(received-allocated)<=0.009)return'allocated';return'partial'}
+function reconciliationStatus(p){return paymentStatus(p)}
+function paymentInvoiceSummary(id){let rows=validPaymentAllocations(id);return rows.length?rows.map(a=>`${esc(a.invoiceNo)}${n(a.amount)?' • Cash '+fmt(a.amount):''}${n(a.tds)?' • TDS '+fmt(a.tds):''}${n(a.gstHold)?' • GST Hold '+fmt(a.gstHold):''}${n(a.gstRelease)?' • GST Release '+fmt(a.gstRelease):''}${n(a.creditNote)?' • Credit Note '+fmt(a.creditNote):''}${n(a.penalty)?' • Penalty '+fmt(a.penalty):''}${n(a.shortPayment)?' • Short Payment '+fmt(a.shortPayment):''}`).join('<br>'):'<span class="help">No valid invoice allocation found for this payment.</span>'}
+function badge(s){let label=s==='allocated'?'Allocated':s==='Credit Note'?'Credit Note':s==='partial'?'Partial':s==='verify'?'Verify Allocation':s==='paid'?'Paid':s==='gst-hold'?'GST Hold':s==='penalty'?'Penalty':s==='short-payment'?'Short Payment':s==='unallocated'?'Unallocated':s==='pending'?'Pending':s==='chadhai'?'Chadhai':s==='not-chadhai'?'Unallocated':s;let cls=(s==='allocated'||s==='paid')?'paid':(s==='Credit Note')?'credit-note':(s==='partial'||s==='gst-hold'||s==='penalty'||s==='short-payment')?'partial':'pending';return`<span class="badge ${cls}">${label}</span>`}
+function invoiceStatusBadges(no,group){let inv=state.invoices.find(v=>normKey(v.no)===normKey(no)&&(!group||sameGroup(v.group,group))),m=inv?im(no,inv.group):im(no,group),out=[];let nonGstOutstanding=Math.max(0,m.outstanding-m.gstHold);if(m.outstanding<=0.009){out.push(badge('paid'))}else{if(m.gstHold>0.009)out.push(badge('gst-hold'));if(nonGstOutstanding>0.009&&m.received>0.009)out.push(badge('partial'));if(m.received<=0.009&&m.gstHold<=0.009)out.push(badge('pending'))}if(m.creditNote>0.009)out.push(badge('Credit Note'));if(m.penaltyPaid>0.009)out.push(badge('penalty'));return out.join(' ')}
+function invoiceStatusText(no,group){let inv=state.invoices.find(v=>normKey(v.no)===normKey(no)&&(!group||sameGroup(v.group,group))),m=inv?im(no,inv.group):im(no,group),parts=[];let nonGstOutstanding=Math.max(0,m.outstanding-m.gstHold);if(m.outstanding<=0.009)parts.push('Paid');else{if(m.gstHold>0.009)parts.push('GST Hold');if(nonGstOutstanding>0.009&&m.received>0.009)parts.push('Partial Payment');if(m.received<=0.009&&m.gstHold<=0.009)parts.push('Pending')}if(m.creditNote>0.009)parts.push('Credit Note '+fmt(m.creditNote));return parts.join(' • ')}
+async function init(){if(DEMO_LOCK){try{indexedDB.deleteDatabase(DB)}catch(e){}try{localStorage.removeItem('recon_recovery')}catch(e){}state={version:4,groups:['Orion Group','Vertex Group','Other'],invoices:DEMO_INVOICES.map(i=>({...i})),payments:DEMO_PAYMENTS.map(p=>({...p})),allocations:DEMO_ALLOCATIONS.map(a=>({...a}))};render();updateSub();return}try{await openDB();let x=await getDB();if(x)state={...state,...x,version:4};else{let old=localStorage.getItem('recon_recovery');if(old)state={...state,...JSON.parse(old),version:4}}}catch(e){}state.groups=state.groups?.length?state.groups:['Orion Group','Vertex Group','Other'];state.invoices=(state.invoices||[]).map(normalizeInvoice);state.payments=(state.payments||[]).map(p=>{let q={...p,suggestedInvoices:p.suggestedInvoices||[]};delete q.posted;return q});state.allocations=(state.allocations||[]).map(a=>({...a,tds:n(a.tds),gstHold:n(a.gstHold),gstRelease:n(a.gstRelease),creditNote:n(a.creditNote),penalty:n(a.penalty),shortPayment:n(a.shortPayment)}));
+for(const p of state.payments){if(n(p.amount)<=0){const legacyCash=state.allocations.filter(a=>a.paymentId===p.id).reduce((s,a)=>s+n(a.amount),0);if(legacyCash>0)p.amount=legacyCash}}
+await save('');render()}
+function updateSub(){$('sub').textContent=`${state.invoices.length} invoices • ${state.payments.length} payments • Auto-saved locally`}
+function renderWorkspace(){$('workspaceBar').innerHTML=`<span class="workspace-label">Workspaces</span><button class="workspace-btn ${!activeGroup?'active':''}" onclick="activeGroup='';renderWorkspace();render()">All Groups</button>`+state.groups.map(g=>`<button class="workspace-btn ${activeGroup===g?'active':''}" onclick="activeGroup='${esc(g)}';renderWorkspace();render()">${esc(g)}</button>`).join('')+`<button class="workspace-btn" onclick="openAddGroup()">+ New Group</button>`}
+const BLOCKED_ACTIONS=['addInv(','saveInvoiceEdit(','editInv(','toggleAllInvoices(','selectAllInvoices(','clearInvoiceSelection(','deleteSelectedInvoices(','delInv(','addPay(','delPay(','openPayment(','saveAlloc(','addGroup(','delGroup(','openAddGroup(','quickAddInvoice(','autoDistribute(','autoFillSelectedVisible(','choosePayment(','restore(','importFile(','importPayments(','downloadTemplate(','downloadPaymentTemplate(','backup(','exportAllData(','exportReport(','exportPaymentHistoryXlsx('];
+const BLOCKED_INPUTS=['ino','icl','ist','idate','iamt','igst','itotal','icn','inote','ig','pid','pcl','pdate','pamt','pnote','pg','ng','defg','payDefg','paymentSearch'];
+function lockMutatingControls(){
+  document.querySelectorAll('[onclick]').forEach(el=>{
+    const oc=el.getAttribute('onclick')||'';
+    if(BLOCKED_ACTIONS.some(fn=>oc.includes(fn))){
+      el.disabled=true;el.setAttribute('disabled','');
+      el.style.pointerEvents='none';el.style.opacity='.4';el.style.cursor='not-allowed';
+      el.title='Disabled in demo preview';
+    }
+  });
+  document.querySelectorAll('input.invoice-select,#selectAllInvoices,#xlsx,#payxlsx,#restore').forEach(el=>{el.disabled=true});
+  BLOCKED_INPUTS.forEach(id=>{const e=document.getElementById(id);if(e){e.disabled=true;e.style.opacity='.5';e.style.cursor='not-allowed'}});
+}
+function render(){controls();renderWorkspace();updateSub();dashboard();renderReports();invoices();payments();allocList();groups();renderPaymentHistory();lockMutatingControls()}
+function renderPaymentHistory(){
+  let body=$('phRows'); if(!body)return;
+  let invQ=String($('phInv')?.value||'').trim();
+  let wanted=invQ?invQ.split(',').map(x=>normKey(x)).filter(Boolean):[];
+  let type=String($('phType')?.value||'');
+  let from=String($('phFrom')?.value||''); let to=String($('phTo')?.value||'');
+  let grouped=new Map();
+  state.allocations.forEach(a=>{
+    let p=state.payments.find(x=>x.id===a.paymentId); if(!p)return;
+    let inv=state.invoices.find(i=>normKey(i.no)===normKey(a.invoiceNo)&&sameGroup(i.group,p.group));
+    if(!inv)return;
+    let date=String(p.date||'');
+    if(from&&date<from)return; if(to&&date>to)return;
+    if(wanted.length&&!wanted.includes(normKey(inv.no)))return;
+    let key=[normKey(inv.no),normKey(p.id),date,normKey(inv.group)].join('|');
+    let r=grouped.get(key);
+    if(!r){
+      r={inv,p,date,cash:0,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0,types:new Set()};
+      grouped.set(key,r);
+    }
+    if(n(a.amount)>0.009){r.cash+=n(a.amount);r.types.add(p.type||'Normal Payment');}
+    if(n(a.gstRelease)>0.009){r.gstRelease+=n(a.gstRelease);r.types.add('GST Release');}
+    if(n(a.gstHold)>0.009){r.gstHold+=n(a.gstHold);r.types.add('GST Hold');}
+    if(n(a.tds)>0.009){r.tds+=n(a.tds);r.types.add('TDS');}
+    if(n(a.creditNote)>0.009){r.creditNote+=n(a.creditNote);r.types.add('Credit Note');}
+    if(n(a.penalty)>0.009){r.penalty+=n(a.penalty);r.types.add('Penalty');}
+    if(n(a.shortPayment)>0.009){r.shortPayment+=n(a.shortPayment);r.types.add('Short Payment');}
+  });
+  let rows=[...grouped.values()].filter(r=>!type||r.types.has(type));
+  rows.sort((x,y)=>(y.date||'').localeCompare(x.date||'')||String(x.inv.no).localeCompare(String(y.inv.no))||String(x.p.id).localeCompare(String(y.p.id)));
+  let html=rows.map(r=>{
+    let m=invoiceMap(r.inv.no,r.inv.group),parts=[];
+    if(r.cash>0.009)parts.push(`Normal Payment ${fmt(r.cash)}`);
+    if(r.gstRelease>0.009)parts.push(`GST Release ${fmt(r.gstRelease)}`);
+    if(r.gstHold>0.009)parts.push(`GST Hold ${fmt(r.gstHold)}`);
+    if(r.tds>0.009)parts.push(`TDS ${fmt(r.tds)}`);
+    if(r.creditNote>0.009)parts.push(`Credit Note ${fmt(r.creditNote)}`);
+    if(r.penalty>0.009)parts.push(`Penalty ${fmt(r.penalty)}`);
+    if(r.shortPayment>0.009)parts.push(`Short Payment ${fmt(r.shortPayment)}`);
+    return `<tr><td><b>${esc(r.inv.no)}</b></td><td>${esc(r.inv.group)}</td><td>${esc(r.inv.client||r.p.client||'')}</td><td>${esc(r.p.id)}</td><td>${esc(r.date)}</td><td>${parts.map(esc).join(' • ')}</td><td class="num">${fmt(r.cash)}</td><td class="num">${fmt(m.outstanding)}</td><td>${invoiceStatusBadges(r.inv.no,r.inv.group)}</td></tr>`;
+  }).join('');
+  body.innerHTML=html||'<tr><td colspan="9"><div class="empty">No payment history found for the selected filters.</div></td></tr>';
+}
+function sameText(a,b){return normKey(a)===normKey(b)}
+function getPaymentHistoryRows(){
+  let invQ=String($('phInv')?.value||'').trim(),wanted=invQ?invQ.split(',').map(x=>normKey(x)).filter(Boolean):[],type=String($('phType')?.value||''),from=String($('phFrom')?.value||''),to=String($('phTo')?.value||''),grouped=new Map();
+  state.allocations.forEach(a=>{
+    let p=state.payments.find(x=>x.id===a.paymentId);if(!p)return;
+    let inv=state.invoices.find(i=>normKey(i.no)===normKey(a.invoiceNo)&&sameGroup(i.group,p.group));if(!inv)return;
+    let date=String(p.date||'');if(from&&date<from||to&&date>to)return;if(wanted.length&&!wanted.includes(normKey(inv.no)))return;
+    let key=[normKey(inv.no),normKey(p.id),date,normKey(inv.group)].join('|'),r=grouped.get(key);
+    if(!r)r={inv,p,date,cash:0,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0,types:new Set()};
+    if(n(a.amount)>0.009){r.cash+=n(a.amount);r.types.add(p.type||'Normal Payment');}
+    if(n(a.gstRelease)>0.009){r.gstRelease+=n(a.gstRelease);r.types.add('GST Release');}
+    if(n(a.gstHold)>0.009){r.gstHold+=n(a.gstHold);r.types.add('GST Hold');}
+    if(n(a.tds)>0.009){r.tds+=n(a.tds);r.types.add('TDS');}
+    if(n(a.creditNote)>0.009){r.creditNote+=n(a.creditNote);r.types.add('Credit Note');}
+    if(n(a.penalty)>0.009){r.penalty+=n(a.penalty);r.types.add('Penalty');}
+    if(n(a.shortPayment)>0.009){r.shortPayment+=n(a.shortPayment);r.types.add('Short Payment');}
+    grouped.set(key,r);
+  });
+  return [...grouped.values()].filter(r=>!type||r.types.has(type)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.inv.no).localeCompare(String(b.inv.no))).map(r=>{
+    let m=invoiceMap(r.inv.no,r.inv.group),summary=[];
+    if(r.cash>0.009)summary.push(`Normal Payment ${fmt(r.cash)}`);
+    if(r.gstRelease>0.009)summary.push(`GST Release ${fmt(r.gstRelease)}`);
+    if(r.gstHold>0.009)summary.push(`GST Hold ${fmt(r.gstHold)}`);
+    if(r.tds>0.009)summary.push(`TDS ${fmt(r.tds)}`);
+    if(r.creditNote>0.009)summary.push(`Credit Note ${fmt(r.creditNote)}`);
+    if(r.penalty>0.009)summary.push(`Penalty ${fmt(r.penalty)}`);
+    if(r.shortPayment>0.009)summary.push(`Short Payment ${fmt(r.shortPayment)}`);
+    return [r.inv.no,r.inv.group,r.inv.client||r.p.client||'',r.p.id,r.date,summary.join(' + '),r.cash,m.outstanding,m.status];
+  });
+}
+function dashboard(){let q=($('q').value||'').toLowerCase(),gf=activeGroup||$('dg').value,sf=$('ds').value;let arr=state.invoices.filter(i=>{let m=im(i.no,i.group),t=[i.no,i.group,i.client,i.state,i.date].join(' ').toLowerCase();return(!gf||i.group==gf)&&(!sf||(sf==='paid'?m.status==='paid'&&m.outstanding<=0.009:sf==='gst-hold'?m.gstHold>0.009:sf==='penalty'?m.penaltyPaid>0.009:sf==='short-payment'?m.shortPayment>0.009:m.status==sf))&&(!q||t.includes(q))});let base=state.invoices.filter(i=>!activeGroup||i.group===activeGroup),o=0,g=0,p=0,t=0,received=0,cn=0,sp=0;base.forEach(i=>{let m=im(i.no,i.group);o+=m.outstanding;g+=m.gstHold;p+=m.penaltyPaid;t+=m.tds;received+=Math.min(m.total,m.received);cn+=m.creditNote;sp+=m.shortPayment});$('cards').innerHTML=`<div class="card"><div class="label">Invoices</div><div class="val">${base.length}</div></div><div class="card"><div class="label">Total Received</div><div class="val good">${fmt(received)}</div></div><div class="card"><div class="label">Outstanding</div><div class="val bad">${fmt(o)}</div></div><div class="card"><div class="label">GST Pending</div><div class="val warn">${fmt(g)}</div></div><div class="card"><div class="label">TDS</div><div class="val warn">${fmt(t)}</div></div><div class="card"><div class="label">Credit Note</div><div class="val warn">${fmt(cn)}</div></div><div class="card"><div class="label">Penalty Pending</div><div class="val warn">${fmt(p)}</div></div><div class="card"><div class="label">Short Payment</div><div class="val warn">${fmt(sp)}</div></div>`;$('heroTitle').textContent=activeGroup?activeGroup+' Workspace':'All Groups Overview';$('heroSub').textContent=activeGroup?`Showing only ${activeGroup} invoices, payments and pending amounts.`:'Select a group above to work in a dedicated client workspace.';$('groups').innerHTML=state.groups.map(g=>{let x=state.invoices.filter(i=>i.group==g),oo=x.reduce((s,i)=>s+im(i.no,i.group).outstanding,0);return`<div class="gcard ${activeGroup===g?'active':''}" onclick="groupPick('${esc(g)}')"><div class="gname">${esc(g)}</div><div class="gnum">${x.length} invoices</div><div class="sub">Outstanding ${fmt(oo)}</div></div>`}).join('')+`<div class="gcard" onclick="openAddGroup()"><div class="gname">+ Add Group</div><div class="gnum">Create new</div><div class="sub">For any new client / business group</div></div>`;$('count').textContent=`(${arr.length} shown)`;$('dt').innerHTML=arr.length?arr.map(i=>{let m=im(i.no,i.group);return`<tr><td>${esc(i.no)}</td><td><span class="badge grp">${esc(i.group)}</span></td><td>${esc(i.client)}</td><td>${esc(i.state)}</td><td>${esc(i.date)}</td><td class="num">${fmt(i.basic)}</td><td class="num">${fmt(i.gst)}</td><td class="num">${fmt(invoiceTotal(i))}</td><td>${invoiceStatusBadges(i.no,i.group)}</td><td class="num">${fmt(m.outstanding)}</td></tr>`}).join(''):'<tr><td colspan="10"><div class="empty">No invoices found for this workspace.</div></td></tr>'}
+function reportBase(){let gf=activeGroup,year=$('ry').value,stateFilter=$('rs').value,month=$('rm').value;return state.invoices.filter(i=>{let bm=String(i.billMonth||monthVal('',i.date)||''),y=bm.slice(0,4),m=bm.slice(5,7);return(!gf||i.group===gf)&&(!year||y===year)&&(!stateFilter||String(i.state||'Unknown')===stateFilter)&&(!month||m===month)})}
+function renderReportFilters(){if(!$('ry'))return;let currentY=$('ry').value,currentS=$('rs').value;let years=[...new Set(state.invoices.map(i=>String(i.billMonth||monthVal('',i.date)||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort().reverse();if(!years.length)years=[String(new Date().getFullYear())];$('ry').innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');if(currentY&&years.includes(currentY))$('ry').value=currentY;let states=[...new Set(state.invoices.map(i=>String(i.state||'Unknown').trim()||'Unknown'))].sort();$('rs').innerHTML='<option value="">All States</option>'+states.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if(states.includes(currentS))$('rs').value=currentS}
+function metricsFor(i){let m=im(i.no,i.group);return{total:invoiceTotal(i),allocated:m.cash,received:m.received,outstanding:m.outstanding,gstPending:m.gstHold,tds:m.tds,creditNote:m.creditNote}}
+// Shared by month-wise / state-wise / client-wise reports below — these three
+// were previously copy-pasted blocks doing the exact same grouping+summing
+// and the exact same row-HTML, just keyed differently. Kept as one place now.
+function aggregateReport(arr,keyFn){let out={};arr.forEach(i=>{let key=keyFn(i);if(!out[key])out[key]={count:0,pending:0,total:0,received:0,tds:0,creditNote:0,out:0,gst:0};let x=out[key],m=metricsFor(i);x.count++;x.pending+=m.outstanding>0?1:0;x.total+=m.total;x.received+=Math.min(m.total,m.received);x.tds+=m.tds;x.creditNote+=m.creditNote;x.out+=m.outstanding;x.gst+=m.gstPending});return out}
+function reportRowsHtml(map,labelFn){let keys=Object.keys(map).sort();return keys.length?keys.map(k=>{let x=map[k];return`<tr><td>${esc(labelFn(k))}</td><td class="num">${x.count}</td><td class="num">${x.pending}</td><td class="num">${fmt(x.total)}</td><td class="num">${fmt(x.received)}</td><td class="num">${fmt(x.tds)}</td><td class="num">${fmt(x.creditNote)}</td><td class="num">${fmt(x.out)}</td><td class="num">${fmt(x.gst)}</td></tr>`}).join(''):'<tr><td colspan="9"><div class="empty">No data for selected filters.</div></td></tr>'}
+function renderReports(){if(!$('reportCards'))return;renderReportFilters();let arr=reportBase(),total=0,received=0,out=0,gst=0,tdsTotal=0,pending=0;arr.forEach(i=>{let m=metricsFor(i);total+=m.total;received+=Math.min(m.total,m.received);out+=m.outstanding;gst+=m.gstPending;tdsTotal+=m.tds;if(m.outstanding>0)pending++});$('reportCards').innerHTML=`<div class="card"><div class="label">Invoice Value</div><div class="val">${fmt(total)}</div></div><div class="card"><div class="label">Total Received (Cash + GST Release)</div><div class="val good">${fmt(received)}</div></div><div class="card"><div class="label">TDS</div><div class="val warn">${fmt(tdsTotal)}</div></div><div class="card"><div class="label">Credit Note</div><div class="val warn">${fmt(arr.reduce((s,i)=>s+metricsFor(i).creditNote,0))}</div></div><div class="card"><div class="label">Outstanding</div><div class="val bad">${fmt(out)}</div></div><div class="card"><div class="label">GST Pending</div><div class="val warn">${fmt(gst)}</div></div>`;let months=aggregateReport(arr,i=>String(i.billMonth||monthVal('',i.date)||'').slice(0,7)||'No Date');let states=aggregateReport(arr,i=>String(i.state||'Unknown').trim()||'Unknown');let clients=aggregateReport(arr,i=>String(i.client||'Unknown').trim()||'Unknown');const monthName=k=>{if(k==='No Date')return k;let[y,mo]=k.split('-');return new Date(Number(y),Number(mo)-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'})};$('monthReport').innerHTML=reportRowsHtml(months,monthName);$('stateReport').innerHTML=reportRowsHtml(states,k=>k);$('clientReport').innerHTML=reportRowsHtml(clients,k=>k);let matrixMonths=[...new Set(arr.map(i=>String(i.billMonth||monthVal('',i.date)||'').slice(0,7)).filter(Boolean))].sort();let matrixStates=[...new Set(arr.map(i=>String(i.state||'Unknown').trim()||'Unknown'))].sort();$('matrixHead').innerHTML=matrixStates.length?'<tr><th>Month</th>'+matrixStates.map(s=>`<th>${esc(s)}</th>`).join('')+'</tr>':'<tr><th>Month</th></tr>';$('matrixReport').innerHTML=matrixMonths.length?matrixMonths.map(k=>{let cells=matrixStates.map(s=>{let v=arr.filter(i=>String(i.billMonth||monthVal('',i.date)||'').slice(0,7)===k&&(String(i.state||'Unknown').trim()||'Unknown')===s).reduce((sum,i)=>sum+metricsFor(i).outstanding,0);return`<td class="num">${fmt(v)}</td>`}).join('');return`<tr><td>${esc(monthName(k))}</td>${cells}</tr>`}).join(''):'<tr><td colspan="'+Math.max(1,matrixStates.length+1)+'"><div class="empty">No data for selected filters.</div></td></tr>';applyReportView()}
+function applyReportView(){let v=$('rv')?$('rv').value:'';['month','state','client','matrix'].forEach(k=>{let b=$(k+'Block');if(b)b.style.display=(!v||v===k)?'':'none'})}
+function downloadCsv(rows,name){
+  const csv='\uFEFF'+rows.map(r=>r.map(x=>{let s=String(x??'');return '"'+s.replaceAll('"','""')+'"'}).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),100);
+}
+function exportReport(type){if(demoBlock())return;
+  let rows=[];
+  if(type==='month'){
+    rows=[['Month','Invoices','Pending Invoices','Invoice Value','Received','TDS','Credit Note','Outstanding','GST Pending'],
+      ...Array.from(document.querySelectorAll('#monthReport tr')).map(tr=>Array.from(tr.children).map(td=>td.innerText.trim()))];
+    downloadCsv(rows,'b-recon-month-report.csv');
+    return;
+  }
+  if(type==='state'){
+    rows=[['State','Invoices','Pending Invoices','Invoice Value','Received','TDS','Credit Note','Outstanding','GST Pending'],
+      ...Array.from(document.querySelectorAll('#stateReport tr')).map(tr=>Array.from(tr.children).map(td=>td.innerText.trim()))];
+    downloadCsv(rows,'b-recon-state-report.csv');
+    return;
+  }
+  if(type==='client'){
+    rows=[['Client','Invoices','Pending Invoices','Invoice Value','Received','TDS','Credit Note','Outstanding','GST Pending'],
+      ...Array.from(document.querySelectorAll('#clientReport tr')).map(tr=>Array.from(tr.children).map(td=>td.innerText.trim()))];
+    downloadCsv(rows,'b-recon-client-report.csv');
+    return;
+  }
+  if(type==='matrix'){
+    rows=[
+      ...Array.from(document.querySelectorAll('#matrixHead tr')).map(tr=>Array.from(tr.children).map(td=>td.innerText.trim())),
+      ...Array.from(document.querySelectorAll('#matrixReport tr')).map(tr=>Array.from(tr.children).map(td=>td.innerText.trim()))
+    ];
+    downloadCsv(rows,'b-recon-state-month-outstanding.csv');
+    return;
+  }
+}
+function invoices(){let q=($('iq').value||'').toLowerCase(),gf=activeGroup||$('if').value,a=state.invoices.filter(i=>(!gf||i.group==gf)&&(!q||[i.no,i.group,i.client,i.state].join(' ').toLowerCase().includes(q)));let h=$('selectAllInvoices');if(h)h.checked=false;$('it').innerHTML=a.length?a.map(i=>{let m=im(i.no,i.group),x=invoiceMap(i.no,i.group);return`<tr><td><input type="checkbox" class="invoice-select" value="${esc(i.no)}" data-group="${esc(i.group)}"></td><td>${esc(i.no)}</td><td><span class="badge grp">${esc(i.group)}</span></td><td>${esc(i.client)}</td><td>${esc(i.state)}</td><td>${esc(i.date)}</td><td class="num">${fmt(i.basic)}</td><td class="num">${fmt(i.gst)}</td><td class="num">${fmt(invoiceTotal(i))}</td><td>${invoiceStatusBadges(i.no,i.group)}</td><td class="num">${fmt(x.outstanding)}</td><td><button class="secondary" onclick="editInv('${encodeURIComponent(String(i.no))}','${encodeURIComponent(String(i.group))}')">Edit</button> <button class="secondary" onclick="delInv('${encodeURIComponent(String(i.no))}','${encodeURIComponent(String(i.group))}')">Remove</button></td></tr>`}).join(''):'<tr><td colspan="12"><div class="empty">No invoices found.</div></td></tr>'}
+function checkInvoiceStatus(){let q=String($('invoiceCheck')?.value||'').trim().toLowerCase(),el=$('invoiceCheckResult');if(!el)return;if(!q){el.innerHTML='Enter an invoice number to see its complete reconciliation status.';return}let exact=state.invoices.find(i=>String(i.no).trim().toLowerCase()===q&&(!activeGroup||sameGroup(i.group,activeGroup)));let i=exact;if(!i){let matches=state.invoices.filter(x=>String(x.no).toLowerCase().includes(q)).slice(0,8);el.innerHTML=matches.length?'<b>Matching invoices:</b> '+matches.map(x=>`<button class="secondary small" onclick="document.getElementById('invoiceCheck').value='${esc(x.no)}';checkInvoiceStatus()">${esc(x.no)}</button>`).join(' '):'No invoice found.';return}let m=im(i.no,i.group),allocs=invoiceMap(i.no,i.group).rows,payRefs=allocs.map(a=>{let p=state.payments.find(x=>x.id===a.paymentId);return p?`${esc(p.id)} (${fmt(a.amount)} cash)`:esc(a.paymentId)}).join(', ')||'None';el.innerHTML=`<div><b>${esc(i.no)}</b> — ${esc(i.client||'')}</div><div style="margin:8px 0">${invoiceStatusBadges(i.no,i.group)}</div><div class="help">Invoice Total: <b>${fmt(invoiceTotal(i))}</b> • Cash Received: <b>${fmt(m.cash)}</b> • TDS: <b>${fmt(m.tds)}</b> • GST Hold: <b>${fmt(m.gstHold)}</b> • GST Released: <b>${fmt(m.gstRelease)}</b> • Credit Note: <b>${fmt(m.creditNote)}</b> • Penalty: <b>${fmt(m.penaltyPaid)}</b> • Short Payment: <b>${fmt(m.shortPayment)}</b> • Outstanding: <b>${fmt(m.outstanding)}</b><br>Payment Ref(s): <b>${payRefs}</b><br>Detailed status: <b>${esc(invoiceStatusText(i.no,i.group))}</b></div>`} 
+function addInv(){if(demoBlock())return;let no=$('ino').value.trim();if(!no)return toast('Invoice number is required');let group=ensure($('ig').value);if(state.invoices.some(i=>sameGroup(i.group,group)&&String(i.no).trim().toLowerCase()===no.toLowerCase()))return toast('Invoice already exists');state.invoices.push(normalizeInvoice({no,group,client:$('icl').value.trim(),state:$('ist').value.trim(),date:$('idate').value,basic:n($('iamt').value),gst:n($('igst').value),total:n($('itotal').value),creditNote:n($('icn').value),penalty:0,notes:$('inote').value.trim()}));save().then(render)}
+function editInv(noEncoded,groupEncoded){
+  let no=decodeURIComponent(noEncoded),group=decodeURIComponent(groupEncoded);
+  let i=state.invoices.find(x=>normKey(x.no)===normKey(no)&&sameGroup(x.group,group));if(!i)return toast('Invoice not found');
+  $('invoiceEditTitle').textContent=`Edit Invoice ${i.no}`;
+  $('invoiceEditBody').innerHTML=`<div class="invoice-edit-form">
+    <div class="field"><label>Invoice No *</label><input id="eino" value="${esc(i.no)}"></div>
+    <div class="field"><label>Group *</label><select id="eig">${opts(false,i.group)}</select></div>
+    <div class="field"><label>Client *</label><input id="eicl" value="${esc(i.client)}"></div>
+    <div class="field"><label>State</label><input id="eist" value="${esc(i.state)}"></div>
+    <div class="field"><label>Date</label><input id="eidate" type="date" value="${esc(i.date)}"></div>
+    <div class="field"><label>Basic Invoice Value (₹)</label><input id="eiamt" type="number" step="0.01" value="${fmtRaw(i.basic)}"></div>
+    <div class="field"><label>GST Amount (₹)</label><input id="eigst" type="number" step="0.01" value="${fmtRaw(i.gst)}"></div>
+    <div class="field"><label>Total Invoice Value (₹)</label><input id="eitotal" type="number" step="0.01" value="${fmtRaw(i.total)}"></div>
+    <div class="field"><label>Credit Note Amount (₹)</label><input id="eicn" type="number" step="0.01" min="0" value="${fmtRaw(i.creditNote)}"></div>
+    <div class="field full"><label>Notes</label><input id="einote" value="${esc(i.notes||'')}"></div>
+  </div>
+  <div class="toolbar" style="justify-content:flex-end;margin-bottom:0"><button class="secondary" onclick="closeInvoiceEdit()">Cancel</button><button onclick="saveInvoiceEdit('${encodeURIComponent(String(i.no))}','${encodeURIComponent(String(i.group))}')">Save Changes</button></div>`;
+  $('invoiceEditModal').classList.add('show');
+}
+function closeInvoiceEdit(){$('invoiceEditModal').classList.remove('show')}
+function saveInvoiceEdit(oldNoEncoded,oldGroupEncoded){if(demoBlock())return;
+  let oldNo=decodeURIComponent(oldNoEncoded),oldGroup=decodeURIComponent(oldGroupEncoded);
+  let i=state.invoices.find(x=>normKey(x.no)===normKey(oldNo)&&sameGroup(x.group,oldGroup));if(!i)return toast('Invoice not found');
+  let no=$('eino').value.trim(),group=ensure($('eig').value),existingRows=state.allocations.filter(a=>normKey(a.invoiceNo)===normKey(oldNo)&&sameGroup(a.group,oldGroup));
+  if(existingRows.length && !sameGroup(oldGroup,group))return toast('Cannot change invoice group while it has payment allocations. Move/reconcile the payment first.');
+  let dup=state.invoices.find(x=>x!==i&&normKey(x.no)===normKey(no)&&sameGroup(x.group,group));
+  if(!no)return toast('Invoice number is required');
+  if(dup)return toast('Another invoice with this number already exists in this group');
+  let oldTotal=invoiceTotal(i);
+  let existingCovered=existingRows.reduce((s,a)=>s+n(a.amount)+n(a.tds)+Math.max(0,n(a.gstHold)-n(a.gstRelease))+n(a.creditNote)+n(a.penalty)+Math.max(0,n(a.shortPayment)-Math.min(n(a.creditNote),n(a.shortPayment))),0);
+  let newTotalPreview=n($('eitotal').value)||n($('eiamt').value)+n($('eigst').value);
+  if(newTotalPreview+0.009<existingCovered)return toast(`Invoice total cannot be below already reconciled amount ${fmt(existingCovered)}.`);
+  i.no=no;i.group=group;i.client=$('eicl').value.trim();i.state=$('eist').value.trim();i.date=$('eidate').value;
+  i.basic=n($('eiamt').value);i.gst=n($('eigst').value);i.total=n($('eitotal').value)||i.basic+i.gst;i.creditNote=n($('eicn').value);i.notes=$('einote').value.trim();normalizeInvoice(i);
+  // Keep existing payment allocations linked to this invoice number when only the invoice details change.
+  // If the invoice number itself changed, update its allocation references too.
+  if(normKey(oldNo)!==normKey(no)||!sameGroup(oldGroup,group)){
+    state.allocations.forEach(a=>{if(normKey(a.invoiceNo)===normKey(oldNo)&&sameGroup(a.group,oldGroup)){a.invoiceNo=no;a.group=group}});
+  }
+  closeInvoiceEdit();save('Invoice updated').then(render)
+}
+function delInv(no,group){if(demoBlock())return;no=decodeURIComponent(String(no));group=group?decodeURIComponent(String(group)):'';let g=group||activeGroup||$('if')?.value||'';let targets=state.invoices.filter(i=>normKey(i.no)===normKey(no)&&(!g||sameGroup(i.group,g)));if(!targets.length)return toast('Invoice not found');if(!confirm(`Delete invoice ${no}${g?' from '+g:''}? This will also remove its allocations.`))return;let keys=new Set(targets.map(i=>normKey(i.no)+'|'+normKey(i.group)));state.invoices=state.invoices.filter(i=>!keys.has(normKey(i.no)+'|'+normKey(i.group)));state.allocations=state.allocations.filter(a=>!keys.has(normKey(a.invoiceNo)+'|'+normKey(a.group)));save('Invoice deleted').then(render)}
+function toggleAllInvoices(checked){document.querySelectorAll(".invoice-select").forEach(cb=>cb.checked=checked)}
+function selectAllInvoices(){document.querySelectorAll(".invoice-select").forEach(cb=>cb.checked=true);let h=$("selectAllInvoices");if(h)h.checked=true}
+function clearInvoiceSelection(){document.querySelectorAll(".invoice-select").forEach(cb=>cb.checked=false);let h=$("selectAllInvoices");if(h)h.checked=false}
+function deleteSelectedInvoices(){if(demoBlock())return;
+  let selected=[...document.querySelectorAll(".invoice-select:checked")].map(cb=>({no:cb.value,group:cb.dataset.group||""}));
+  if(!selected.length)return toast("Select at least one invoice");
+  if(!confirm(`Delete ${selected.length} selected invoice${selected.length>1?'s':''}? This will also remove their allocations.`))return;
+  let keys=new Set(selected.map(x=>normKey(x.no)+"|"+normKey(x.group)));
+  let nos=new Set(selected.map(x=>normKey(x.no)));
+  state.invoices=state.invoices.filter(i=>!keys.has(normKey(i.no)+"|"+normKey(i.group)));
+  state.allocations=state.allocations.filter(a=>!nos.has(normKey(a.invoiceNo)) || !selected.some(x=>normKey(x.no)===normKey(a.invoiceNo)&&sameGroup(x.group,a.group)));
+  save("Selected invoices deleted").then(render)
+}
+function addPay(){if(demoBlock())return;let id=$('pid').value.trim();if(!id)return toast('Payment reference is required');if(state.payments.some(p=>p.id==id))return toast('Payment already exists');state.payments.push({id,group:ensure($('pg').value),client:$('pcl').value.trim(),date:$('pdate').value,amount:n($('pamt').value),type:$('ptype').value,notes:$('pnote').value.trim(),suggestedInvoices:[]});save().then(render)}
+function togglePaymentSection(){
+  let el=$('paymentListTable'),btn=$('togglePaymentListBtn');if(!el||!btn)return;
+  let hidden=el.style.display==='none';el.style.display=hidden?'':'none';btn.textContent=hidden?'Hide Payments':'Show Payments';
+}
+function togglePaymentHistory(){
+  let el=$('paymentHistoryTable'),btn=$('togglePaymentHistoryBtn');if(!el||!btn)return;
+  let hidden=el.style.display==='none';el.style.display=hidden?'':'none';btn.textContent=hidden?'Hide History':'Show History';
+}
+function payments(){let q=($('pq').value||'').toLowerCase(),gf=activeGroup||$('pf').value,a=state.payments.filter(p=>(!gf||p.group==gf)&&(!q||[p.id,p.group,p.client,p.type,p.date].join(' ').toLowerCase().includes(q)));$('pt').innerHTML=a.length?a.map(p=>{let m=pm(p.id),st=paymentStatus(p),tds=paymentTDS(p.id);return`<tr><td><b>${esc(p.id)}</b></td><td><span class="badge grp">${esc(p.group)}</span></td><td>${esc(p.client)}</td><td>${esc(p.date)}</td><td>${esc(p.type)}</td><td class="num">${fmt(p.amount)}</td><td class="num">${fmt(m.allocated)}</td><td class="num">${fmt(m.unallocated)}</td><td class="num">${fmt(tds)}</td><td>${badge(st)}</td><td><button class="secondary small" onclick="viewPaymentInvoices('${esc(p.id)}')">View Invoices</button> <button class="secondary small" onclick="openPayment('${esc(p.id)}')">Allocate</button> <button class="secondary small" onclick="delPay('${esc(p.id)}')">Remove</button></td></tr>`}).join(''):'<tr><td colspan="11"><div class="empty">No payments found.</div></td></tr>'}
+function paymentHistoryActivity(p,a){let parts=[];if(n(a.gstRelease)>0.009)parts.push('GST Release');if(n(a.gstHold)>0.009)parts.push('GST Hold');if(n(a.tds)>0.009)parts.push('TDS');if(n(a.creditNote)>0.009)parts.push('Credit Note');if(n(a.penalty)>0.009)parts.push('Penalty');if(n(a.shortPayment)>0.009)parts.push('Short Payment');if(!parts.length)parts.push(p.type||'Normal Payment');return parts.join(' + ')}
+function exportPaymentHistoryXlsx(){if(demoBlock())return;
+  const invRaw=String($('phInv')?.value||'').trim();
+  const invSet=new Set(invRaw.split(',').map(x=>normKey(x)).filter(Boolean));
+  const type=String($('phType')?.value||'').trim();
+  const from=String($('phFrom')?.value||'').trim(),to=String($('phTo')?.value||'').trim();
+  const grouped=new Map();
+  state.allocations.forEach(a=>{
+    const p=state.payments.find(x=>x.id===a.paymentId);if(!p)return;
+    const i=findInvoice(a.invoiceNo,p.group);if(!i)return;
+    if(from&&String(p.date)<from)return;if(to&&String(p.date)>to)return;
+    if(invSet.size&&!invSet.has(normKey(i.no)))return;
+    const key=[normKey(i.no),normKey(p.id),String(p.date||''),normKey(i.group)].join('|');
+    let r=grouped.get(key);if(!r)r={i,p,cash:0,tds:0,gstHold:0,gstRelease:0,creditNote:0,penalty:0,shortPayment:0,types:new Set()};
+    if(n(a.amount)>0.009){r.cash+=n(a.amount);r.types.add(p.type||'Normal Payment');}
+    if(n(a.tds)>0.009){r.tds+=n(a.tds);r.types.add('TDS');}
+    if(n(a.gstHold)>0.009){r.gstHold+=n(a.gstHold);r.types.add('GST Hold');}
+    if(n(a.gstRelease)>0.009){r.gstRelease+=n(a.gstRelease);r.types.add('GST Release');}
+    if(n(a.creditNote)>0.009){r.creditNote+=n(a.creditNote);r.types.add('Credit Note');}
+    if(n(a.penalty)>0.009){r.penalty+=n(a.penalty);r.types.add('Penalty');}
+    if(n(a.shortPayment)>0.009){r.shortPayment+=n(a.shortPayment);r.types.add('Short Payment');}
+    grouped.set(key,r);
+  });
+  const rows=[['Invoice No','Invoice Group','Client','Invoice Date','Invoice Total','Payment Ref','Payment Date','Transaction Breakdown','Payment Type','Cash Received / Allocated','TDS','GST Hold','GST Release','Credit Note','Penalty','Short Payment','Outstanding After Allocation']];
+  [...grouped.values()].filter(r=>!type||r.types.has(type)).sort((a,b)=>String(a.p.date).localeCompare(String(b.p.date))).forEach(r=>{
+    const m=invoiceMap(r.i.no,r.i.group),summary=[];
+    if(r.cash>0.009)summary.push(`Normal Payment ${fmt(r.cash)}`);
+    if(r.gstRelease>0.009)summary.push(`GST Release ${fmt(r.gstRelease)}`);
+    if(r.gstHold>0.009)summary.push(`GST Hold ${fmt(r.gstHold)}`);
+    if(r.tds>0.009)summary.push(`TDS ${fmt(r.tds)}`);
+    if(r.creditNote>0.009)summary.push(`Credit Note ${fmt(r.creditNote)}`);
+    if(r.penalty>0.009)summary.push(`Penalty ${fmt(r.penalty)}`);
+    if(r.shortPayment>0.009)summary.push(`Short Payment ${fmt(r.shortPayment)}`);
+    rows.push([r.i.no,r.i.group,r.i.client,r.i.date,invoiceTotal(r.i),r.p.id,r.p.date,summary.join(' + '),r.p.type||'',r.cash,r.tds,r.gstHold,r.gstRelease,r.creditNote,r.penalty,r.shortPayment,m.outstanding]);
+  });
+  if(rows.length===1){toast('No payment history found for the selected filters');return;}
+  downloadXlsx(rows,'Payment History','b-recon-invoice-payment-history.xlsx');
+}
+function delPay(id){if(demoBlock())return;state.payments=state.payments.filter(p=>p.id!=id);state.allocations=state.allocations.filter(a=>a.paymentId!=id);save().then(render)}
+function viewPaymentInvoices(id){let p=state.payments.find(x=>x.id===id);if(!p)return;let m=pm(id),rows=m.rows.map(a=>{let i=state.invoices.find(x=>normKey(x.no)===normKey(a.invoiceNo)&&sameGroup(x.group,a.group)),imx=invoiceMap(a.invoiceNo,a.group);return`<tr><td>${esc(a.invoiceNo)}</td><td>${esc(i?.client||p.client||'')}</td><td>${fmt(i?invoiceTotal(i):0)}</td><td>${fmt(a.amount)}</td><td>${fmt(a.tds)}</td><td>${fmt(a.gstHold)}</td><td>${fmt(a.gstRelease)}</td><td>${fmt(a.creditNote)}</td><td>${fmt(a.penalty)}</td><td>${fmt(a.shortPayment)}</td><td>${fmt(imx.outstanding)}</td><td>${invoiceStatusBadges(a.invoiceNo,a.group)}</td></tr>`}).join('');let suggested=(p.suggestedInvoices||[]).filter(ref=>!m.rows.some(a=>String(a.invoiceNo).toLowerCase()===String(ref).toLowerCase())).map(ref=>`<span class="badge">${esc(ref)} pending invoice match</span>`).join(' ');$('paymentModalTitle').textContent=`Payment ${p.id}`;$('paymentModalBody').innerHTML=`<div class="payment-detail-grid"><div class="payment-detail-card"><div class="label">Received</div><div class="value">${fmt(p.amount)}</div></div><div class="payment-detail-card"><div class="label">Allocated</div><div class="value">${fmt(m.allocated)}</div></div><div class="payment-detail-card"><div class="label">Unallocated</div><div class="value">${fmt(m.unallocated)}</div></div><div class="payment-detail-card"><div class="label">Status</div><div class="value">${badge(paymentStatus(p))}</div></div></div>${suggested?`<div class="box" style="margin-bottom:14px"><b>Invoice references awaiting match:</b><div style="margin-top:8px">${suggested}</div></div>`:''}<div class="table"><table class="payment-invoice-table"><thead><tr><th>Invoice</th><th>Client</th><th>Invoice Total</th><th>Cash</th><th>TDS</th><th>GST Hold</th><th>GST Release</th><th>Credit Note</th><th>Penalty</th><th>Short Payment</th><th>Outstanding</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="10"><div class="empty">No invoices allocated to this payment yet.</div></td></tr>'}</tbody></table></div>`;$('paymentModal').classList.add('show')}function closePaymentInvoices(){ $('paymentModal').classList.remove('show') }
+function openPayment(id){$('ap').value=id;document.querySelector('[data-p=alloc]').click();render();setTimeout(()=>{$('ap').value=id;allocForm()},0)}
+function allocList(){let cur=$('ap').value,available=state.payments.filter(p=>pm(p.id).unallocated>0.009||paymentAllocations(p.id).length);$('ap').innerHTML='<option value="">-- Select Payment --</option>'+available.map(p=>`<option value="${esc(p.id)}">${esc(p.id)} — ${esc(p.client||'No client')} — Received ${fmt(p.amount)} — Allocated ${fmt(pm(p.id).allocated)}</option>`).join('');if(cur&&available.some(p=>p.id===cur))$('ap').value=cur;renderPaymentPicker(available);if(cur&&available.some(p=>p.id===cur)){let cp=available.find(p=>p.id===cur);$('paymentSearch').value=`${cp.id} — ${cp.client||'No client'} — Received ${fmt(cp.amount)}`;}allocForm()}
+function renderPaymentPicker(available,query=''){let wrap=$('paymentPicker'),res=$('paymentResults');if(!wrap||!res)return;let q=String(query||'').trim().toLowerCase();let list=available.filter(p=>!q||[p.id,p.group,p.client,p.date,p.type,String(p.amount)].join(' ').toLowerCase().includes(q));res.innerHTML=list.length?list.map(p=>`<button type="button" class="payment-result" onclick="choosePayment(decodeURIComponent('${encodeURIComponent(String(p.id))}'))"><div class="pr-main">${esc(p.id)} — ${esc(p.client||'No client')}</div><div class="pr-sub">${esc(p.date||'')} • ${esc(p.type||'Normal Payment')} • Received ${fmt(p.amount)} • Allocated ${fmt(pm(p.id).allocated)}</div></button>`).join(''):'<div class="help" style="padding:10px 8px">No matching payments found.</div>';wrap.classList.add('open')}
+function choosePayment(id){let sel=$('ap');sel.value=id;let p=state.payments.find(x=>x.id===id);$('paymentSearch').value=p?`${p.id} — ${p.client||'No client'} — Received ${fmt(p.amount)}`:'';$('paymentPicker').classList.remove('open');allocForm()}
+function filterPaymentPicker(){let available=state.payments.filter(p=>pm(p.id).unallocated>0.009||paymentAllocations(p.id).length);renderPaymentPicker(available,$('paymentSearch').value)}
+document.addEventListener('click',e=>{let w=$('paymentPicker');if(w&&!w.contains(e.target))w.classList.remove('open')});
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='paymentSearch')filterPaymentPicker()});
+document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='paymentSearch'){let available=state.payments.filter(p=>pm(p.id).unallocated>0.009||paymentAllocations(p.id).length);renderPaymentPicker(available,e.target.value)}});
+function allocForm(){let id=$('ap').value;if(!id){$('aa').innerHTML='';return}let p=state.payments.find(x=>x.id==id),m=pm(id),suggested=new Set((p.suggestedInvoices||[]).map(x=>String(x).toLowerCase()));window.apid=id;window.showAllAlloc=false;window.allocCandidates=state.invoices.filter(i=>sameGroup(i.group,p.group)&&(!p.client||!String(i.client||'').trim()||String(i.client).trim().toLowerCase()===String(p.client).trim().toLowerCase())).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));window.allocSuggested=suggested;$('aa').innerHTML=`<div class="box"><div class="quick-summary"><div class="quick-card"><div class="label">Payment Received</div><div class="qv">${fmt(p.amount)}</div></div><div class="quick-card"><div class="label">Already Cash Allocated</div><div class="qv">${fmt(m.allocated)}</div></div><div class="quick-card"><div class="label">Cash Left</div><div class="qv warn" id="allocRemain">${fmt(m.unallocated)}</div></div><div class="quick-card"><div class="label">TDS Recorded</div><div class="qv">${fmt(paymentTDS(id))}</div></div><div class="quick-card"><div class="label">Allocation Status</div><div class="qv" style="font-size:15px">${badge(paymentStatus(p))}</div></div></div><div class="allocation-detail" style="margin:12px 0;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--panel)"><div class="label" style="margin-bottom:6px">Linked Invoice Details</div><div id="allocationInvoiceSummary">${paymentInvoiceSummary(id)}</div></div><div class="alloc-tools"><input id="allocSearch" placeholder="Search invoice number, state or client..." oninput="renderAllocRows()"><button class="secondary small" onclick="toggleAddInvoice()">＋ Add Invoice</button><button class="secondary small" onclick="selectVisibleAlloc(true)">Select Visible</button><button class="secondary small" onclick="selectVisibleAlloc(false)">Clear Visible</button><button class="small" onclick="autoDistribute()">Auto Distribute Cash</button><button onclick="saveAlloc()">Save Allocation</button></div><div class="help" style="margin-bottom:8px">For each invoice enter <b>Cash Allocated</b>, then record any <b>TDS</b>, <b>GST Hold</b>, <b>GST Release</b>, <b>Credit Note</b> or <b>Penalty</b>. TDS, GST Hold, Credit Note and Penalty reduce the invoice balance but do not reduce the bank cash received. If Short Payment represents the same Credit Note, the system reconciles it once and does not double-count it. This lets one ₹30,000 payment be mapped across 5 invoices while separately recording deductions.</div><div class="alloc-row2 header"><div>✓</div><div>Invoice</div><div>Invoice Total</div><div>Cash Allocated</div><div>TDS</div><div>GST Hold</div><div>GST Release</div><div>Credit Note</div><div>Penalty</div><div>Short Payment</div><div>Balance</div></div><div id="allocRows"></div></div>`;renderAllocRows()}
+function renderAllocRows(){
+  let wrap=$('allocRows');if(!wrap)return;
+  let q=($('allocSearch').value||'').toLowerCase().trim();
+  let p=state.payments.find(x=>x.id===window.apid);
+  // Always use the full same-group invoice pool here. Linked invoices must not disappear
+  // just because their stored client text differs slightly from the payment client.
+  let all=state.invoices.filter(i=>sameGroup(i.group,p?.group));
+  let mappedIds=new Set(paymentAllocations(window.apid).map(a=>normKey(a.invoiceNo)));
+  let suggestedIds=new Set((p?.suggestedInvoices||[]).map(x=>normKey(x)));
+  let mapped=all.filter(i=>mappedIds.has(normKey(i.no))||suggestedIds.has(normKey(i.no)));
+
+  // In Add Invoice mode, search the complete same-group invoice pool.
+  // This makes manual allocation behave like an autocomplete/search result,
+  // rather than requiring the invoice to already be linked.
+  let searchPool=state.invoices.filter(i=>sameGroup(i.group,p?.group));
+  let pool=window.showAllAlloc ? searchPool : mapped;
+  let rows=pool.filter(i=>!q||[i.no,i.client,i.state,i.date].join(' ').toLowerCase().includes(q));
+
+  let heading=window.showAllAlloc
+    ? `<div class="help" style="margin-bottom:8px">Search the invoice number below. Matching invoices from <b>${esc(p?.group||'this group')}</b> will appear here. Tick an invoice to add it to this payment.</div>`
+    : `<div class="help" style="margin-bottom:8px">Showing invoices already linked to this payment. Use <b>＋ Add Invoice</b> to search and add another invoice.</div>`;
+
+  let suggestions='';
+  if(window.showAllAlloc && q){
+    let exact=searchPool.filter(i=>normKey(i.no)===normKey(q));
+    if(exact.length){
+      suggestions=`<div class="alloc-suggestions"><div class="label">Invoice suggestions</div>${exact.map(i=>`<button type="button" class="suggestion-chip" onclick="quickAddInvoice('${String(i.no).replace(/'/g,"\\'")}')"><b>${esc(i.no)}</b><span>${esc(i.client||'')} • ${esc(i.state||'')} • ${fmt(invoiceTotal(i))}</span></button>`).join('')}</div>`;
+    }
+  }
+
+  wrap.innerHTML=heading+suggestions+(rows.length?rows.map(i=>{
+    let old=state.allocations.find(a=>a.paymentId===window.apid&&normKey(a.invoiceNo)===normKey(i.no)&&sameGroup(a.group||i.group,i.group));
+    let sug=suggestedIds.has(normKey(i.no))&&!old,checked=!!old||sug;
+    return `<div class="alloc-row2 ${sug?'suggest':''}" data-inv="${esc(i.no)}">
+      <div><input type="checkbox" class="ainvcheck" ${checked?'checked':''} onchange="updateAllocRemaining()"></div>
+      <div><b>${esc(i.no)}</b><div class="help">${esc(i.client||'')} • ${esc(i.state||'')} • ${esc(i.group||'')}</div></div>
+      <div class="num">${fmt(invoiceTotal(i))}</div>
+      <div><input class="aamt" type="number" step="0.01" min="0" value="${old?fmtRaw(old.amount):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div><input class="atds" type="number" step="0.01" min="0" value="${old?fmtRaw(old.tds):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div><input class="agst" type="number" step="0.01" min="0" value="${old?fmtRaw(old.gstHold):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div><input class="agrel" type="number" step="0.01" min="0" value="${old?fmtRaw(old.gstRelease):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div><input class="acn" type="number" step="0.01" min="0" value="${old?fmtRaw(old.creditNote):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div><input class="apen" type="number" step="0.01" min="0" value="${old?fmtRaw(old.penalty):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div><input class="ashort" type="number" step="0.01" min="0" value="${old?fmtRaw(old.shortPayment):''}" placeholder="0" oninput="updateAllocRemaining()"></div>
+      <div class="num allocBalance">${fmt(Math.max(0,invoiceTotal(i)-n(old?.amount)-n(old?.tds)-Math.max(0,n(old?.gstHold)-n(old?.gstRelease))-n(old?.creditNote)-n(old?.penalty)-Math.max(0,n(old?.shortPayment)-Math.min(n(old?.creditNote),n(old?.shortPayment)))))}</div>
+    </div>`
+  }).join(''):'<div class="empty">'+(window.showAllAlloc?(q?'No matching invoice found in this payment group.':'Search an invoice number above to add it.'):'No invoices linked to this payment yet. Click ＋ Add Invoice to choose one.')+'</div>');
+  updateAllocRemaining();
+}
+function quickAddInvoice(no){if(demoBlock())return;
+  let input=$('allocSearch');if(input){input.value=no}
+  renderAllocRows();
+  let row=[...document.querySelectorAll('#allocRows .alloc-row2')].find(r=>normKey(r.dataset.inv)===normKey(no));
+  if(row){
+    row.querySelector('.ainvcheck').checked=true;
+    row.scrollIntoView({behavior:'smooth',block:'nearest'});
+    row.querySelector('.aamt')?.focus();
+  }
+  updateAllocRemaining();
+}
+function toggleAddInvoice(){
+  window.showAllAlloc=!window.showAllAlloc;
+  $('allocSearch').value='';
+  let btn=[...document.querySelectorAll('#aa .alloc-tools button')].find(b=>b.textContent.includes('Add Invoice')||b.textContent.includes('Hide Invoices'));
+  if(btn)btn.textContent=window.showAllAlloc?'Hide Invoices':'＋ Add Invoice';
+  renderAllocRows();
+}
+function autoFillSelectedVisible(){let remain=pm(window.apid).unallocated;document.querySelectorAll('#allocRows .alloc-row2').forEach(r=>{let cb=r.querySelector('.ainvcheck'),input=r.querySelector('.aamt');if(!cb||!cb.checked||remain<=0)return;let inv=state.invoices.find(i=>normKey(i.no)===normKey(r.dataset.inv)),out=invoiceMap(inv.no,inv.group).outstanding,use=Math.min(remain,out);input.value=use.toFixed(2);remain-=use});updateAllocRemaining()}
+function autoDistribute(){let remain=pm(window.apid).unallocated,rows=[...document.querySelectorAll('#allocRows .alloc-row2')].filter(r=>r.querySelector('.ainvcheck')?.checked);if(!rows.length)rows=[...document.querySelectorAll('#allocRows .alloc-row2')];for(const r of rows){if(remain<=0)break;let pay=state.payments.find(x=>x.id===window.apid),inv=state.invoices.find(i=>normKey(i.no)===normKey(r.dataset.inv)&&sameGroup(i.group,pay?.group));if(!inv)continue;let old=state.allocations.find(a=>a.paymentId===window.apid&&normKey(a.invoiceNo)===normKey(inv.no)&&sameGroup(a.group,inv.group)),existing=n(old?.amount),out=Math.max(0,invoiceMap(inv.no,inv.group).outstanding+existing),use=Math.min(remain,out);r.querySelector('.ainvcheck').checked=true;r.querySelector('.aamt').value=use.toFixed(2);remain-=use}updateAllocRemaining()}
+function updateAllocRemaining(){let total=0;document.querySelectorAll('#allocRows .alloc-row2').forEach(r=>{if(r.querySelector('.ainvcheck')?.checked){let cash=n(r.querySelector('.aamt')?.value),rel=n(r.querySelector('.agrel')?.value);if(rel>0.009&&Math.abs(cash-rel)<=0.009)cash=0;total+=cash+rel}});let pay=state.payments.find(p=>p.id===window.apid),base=n(pay?.amount),remain=Math.max(0,base-total),el=$('allocRemain');if(el){el.textContent=fmt(remain);el.className='qv '+(total>base+0.009?'bad':remain>0.009?'warn':'good')}document.querySelectorAll('#allocRows .alloc-row2').forEach(r=>{let pay=state.payments.find(x=>x.id===window.apid),i=state.invoices.find(x=>normKey(x.no)===normKey(r.dataset.inv)&&sameGroup(x.group,pay?.group));if(!i)return;let bal=Math.max(0,invoiceTotal(i)-n(r.querySelector('.aamt')?.value)-n(r.querySelector('.atds')?.value)-Math.max(0,n(r.querySelector('.agst')?.value)-n(r.querySelector('.agrel')?.value))-n(r.querySelector('.acn')?.value)-n(r.querySelector('.apen')?.value)-Math.max(0,n(r.querySelector('.ashort')?.value)-Math.min(n(r.querySelector('.acn')?.value),n(r.querySelector('.ashort')?.value))));let el=r.querySelector('.allocBalance');if(el)el.textContent=fmt(bal)});if($('allocationInvoiceSummary'))$('allocationInvoiceSummary').innerHTML=paymentInvoiceSummary(window.apid)}function saveAlloc(){if(demoBlock())return;
+  let pay=state.payments.find(p=>p.id==window.apid);if(!pay)return;
+  let oldForPayment=state.allocations.filter(a=>a.paymentId===window.apid);
+  let domRows=[...document.querySelectorAll('#allocRows .alloc-row2')];
+  let visibleKeys=new Set(domRows.map(r=>{let pay=state.payments.find(x=>x.id===window.apid);return normKey(r.dataset.inv)+'|'+normKey(pay?.group||'')}));
+  let preserved=oldForPayment.filter(a=>!visibleKeys.has(normKey(a.invoiceNo)+'|'+normKey(a.group)));
+  let a=[],total=0;
+  for(const r of domRows){
+    let cb=r.querySelector('.ainvcheck'),cash=n(r.querySelector('.aamt')?.value),tds=n(r.querySelector('.atds')?.value),gst=n(r.querySelector('.agst')?.value),gstRelease=n(r.querySelector('.agrel')?.value),creditNote=n(r.querySelector('.acn')?.value),pen=n(r.querySelector('.apen')?.value),shortPayment=n(r.querySelector('.ashort')?.value),invNo=r.dataset.inv;
+    if(!cb?.checked)continue;
+    if(!invNo)continue;
+    let inv=state.invoices.find(x=>normKey(x.no)===normKey(invNo)&&sameGroup(x.group,pay.group));
+    if(!inv)return toast(`Invoice ${invNo} not found in this payment group.`);
+    if(!(cash>0||tds>0||gst>0||gstRelease>0||creditNote>0||pen>0||shortPayment>0))continue;
+    let releaseOnly=gstRelease>0.009&&Math.abs(cash-gstRelease)<=0.009;
+    let effectiveCash=releaseOnly?0:cash;
+    let covered=effectiveCash+tds+Math.max(0,gst-gstRelease)+creditNote+pen+Math.max(0,shortPayment-Math.min(creditNote,shortPayment));
+    if(covered>invoiceTotal(inv)+0.009)return toast(`Allocation exceeds invoice total for ${inv.no}.`);
+    a.push({paymentId:window.apid,invoiceNo:inv.no,group:inv.group,amount:effectiveCash,tds,gstHold:gst,gstRelease,creditNote,penalty:pen,shortPayment});
+    total+=effectiveCash+gstRelease;
+  }
+  // Preserve allocations hidden by search/filter. Only rows actually rendered are edited/deleted.
+  let finalRows=preserved.concat(a);
+  if(total>n(pay.amount)+0.009)return toast('Cash allocation exceeds payment received amount');
+  state.allocations=state.allocations.filter(x=>x.paymentId!==window.apid).concat(finalRows);
+  pay.suggestedInvoices=[];
+  save('Payment allocation saved').then(render)
+}
+function groups(){$('gt').innerHTML=state.groups.map(g=>`<tr><td><b>${esc(g)}</b></td><td class="num">${state.invoices.filter(i=>i.group==g).length}</td><td class="num">${state.payments.filter(p=>p.group==g).length}</td><td><button class="secondary" onclick="delGroup('${esc(g)}')">Remove</button></td></tr>`).join('')}
+function openAddGroup(){document.querySelector('[data-p=settings]').click();setTimeout(()=>$('ng').focus(),50)}
+function addGroup(){if(demoBlock())return;let g=$('ng').value.trim();if(!g)return;if(state.groups.some(x=>x.toLowerCase()==g.toLowerCase()))return toast('Group already exists');state.groups.push(g);$('ng').value='';activeGroup=g;save().then(render)}
+function delGroup(g){if(demoBlock())return;if(!g)return;if(state.groups.length===1)return toast('At least one group is required');let invCount=state.invoices.filter(i=>sameGroup(i.group,g)).length,payCount=state.payments.filter(p=>sameGroup(p.group,g)).length;if((invCount||payCount)&&!confirm(`Delete group '${g}' and all ${invCount} invoice(s), ${payCount} payment(s) and their allocations? This cannot be undone.`))return;let payIds=new Set(state.payments.filter(p=>sameGroup(p.group,g)).map(p=>p.id));let invNos=new Set(state.invoices.filter(i=>sameGroup(i.group,g)).map(i=>normKey(i.no)));state.allocations=state.allocations.filter(a=>!payIds.has(a.paymentId)&&!(sameGroup(a.group,g)||invNos.has(normKey(a.invoiceNo))));state.invoices=state.invoices.filter(i=>!sameGroup(i.group,g));state.payments=state.payments.filter(p=>!sameGroup(p.group,g));state.groups=state.groups.filter(x=>!sameGroup(x,g));if(activeGroup&&sameGroup(activeGroup,g))activeGroup=state.groups[0]||'';save('Group deleted').then(render)}
+function groupPick(g){activeGroup=g;renderWorkspace();$('dg').value=g;document.querySelector('[data-p=dash]').click();render()}
+function header(x){return String(x??'').toLowerCase().replace(/[^a-z0-9]/g,'')}
+function pick(o,arr){let k=Object.keys(o);for(let a of arr){let z=k.find(x=>header(x)==header(a));if(z&&o[z]!==''&&o[z]!=null)return o[z]}return''}
+function dateVal(v){if(!v)return'';if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);if(typeof v==='number'&&window.XLSX){let d=XLSX.SSF.parse_date_code(v);return d?`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`:''}let s=String(v).trim(),m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:s}
+function csv(text){let lines=text.split(/\r?\n/).filter(x=>x.trim()),parse=s=>{let a=[],c='',q=0;for(let i=0;i<s.length;i++){if(s[i]=='"'){if(s[i+1]=='"'){c+='"';i++}else q=!q}else if(s[i]==','&&!q){a.push(c);c=''}else c+=s[i]}a.push(c);return a};if(!lines.length)return[];let h=parse(lines[0]);return lines.slice(1).map(x=>{let v=parse(x),o={};h.forEach((k,i)=>o[k]=v[i]||'');return o})}
+async function importFile(e){if(demoBlock())return;let f=e.target.files[0];if(!f)return;try{let rows;if(f.name.toLowerCase().endsWith('.csv'))rows=csv(await f.text());else{if(!window.XLSX)throw Error('Excel library unavailable. Try CSV.');let w=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});rows=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:''})}let add=0,skip=0,def=$('defg').value||'Other';rows.forEach(r=>{let no=String(pick(r,['Invoice No','Invoice Number','Invoice','Inv No'])).trim();if(!no)return;let g=ensure(String(pick(r,['Group','Client Group','Business Group'])||def).trim()||def);let existing=state.invoices.find(i=>sameGroup(i.group,g)&&normKey(i.no)===normKey(no));if(existing){let basicRaw=pick(r,['Basic','Basic Value','Basic Invoice Value','Invoice Basic','Taxable Value','Amount']);let gstRaw=pick(r,['GST','GST Amount','GST Value']);let totalRaw=pick(r,['Total','Total Invoice Value','Invoice Total','Grand Total']);if(basicRaw!==''&&basicRaw!=null)existing.basic=n(basicRaw);if(gstRaw!==''&&gstRaw!=null)existing.gst=n(gstRaw);if(totalRaw!==''&&totalRaw!=null)existing.total=n(totalRaw);else if(basicRaw!==''||gstRaw!=='')existing.total=n(existing.basic)+n(existing.gst);let clientRaw=pick(r,['Client','Client Name','Customer','Customer Name']);let stateRaw=pick(r,['State','Location']);let dateRaw=pick(r,['Invoice Date','Date']);let monthRaw=pick(r,['Month','Bill Month','Billing Month','Bill Period']);if(clientRaw!==''&&clientRaw!=null)existing.client=String(clientRaw).trim();if(stateRaw!==''&&stateRaw!=null)existing.state=String(stateRaw).trim();if(dateRaw!==''&&dateRaw!=null)existing.date=dateVal(dateRaw);if(monthRaw!==''&&monthRaw!=null){existing.billMonth=monthVal(monthRaw,existing.date);existing.billMonthSource='excel-month'}else if(!existing.billMonth){existing.billMonth=monthVal('',existing.date);existing.billMonthSource='invoice-date-fallback'}existing=normalizeInvoice(existing);skip++;return}let basic=n(pick(r,['Basic','Basic Value','Basic Invoice Value','Invoice Basic','Taxable Value','Amount'])),gst=n(pick(r,['GST','GST Amount','GST Value'])),total=n(pick(r,['Total','Total Invoice Value','Invoice Total','Grand Total']))||basic+gst;let invoiceDate=dateVal(pick(r,['Invoice Date','Date']));let monthRaw=pick(r,['Month','Bill Month','Billing Month','Bill Period']),billMonth=monthVal(monthRaw,invoiceDate);state.invoices.push(normalizeInvoice({no,group:g,client:String(pick(r,['Client','Client Name','Customer','Customer Name'])).trim(),state:String(pick(r,['State','Location'])).trim(),date:invoiceDate,billMonth,billMonthSource:monthRaw!==''&&monthRaw!=null?'excel-month':'invoice-date-fallback',basic,gst,total,creditNote:0,penalty:0,notes:String(pick(r,['Notes','Remarks'])).trim()}));add++});await resolveSuggestedAllocations();await save();render();$('ir').textContent=`Invoice import complete: ${add} added, ${skip} existing invoices updated.`;e.target.value=''}catch(x){$('ir').textContent='Import failed: '+x.message}}
+async function importPayments(e){if(demoBlock())return;
+  let f=e.target.files[0];if(!f)return;
+  try{
+    let rows;
+    if(f.name.toLowerCase().endsWith('.csv')) rows=csv(await f.text());
+    else{
+      if(!window.XLSX)throw Error('Excel library unavailable. Try CSV.');
+      let w=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+      rows=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:''});
+    }
+
+    let added=0,updated=0,conflicts=0,allocAdded=0,allocUpdated=0,
+        groupDefault=$('payDefg').value||'Other',byRef={};
+
+    /*
+      IMPORTANT:
+      The payment Excel used by the user has one Payment Ref on many invoice
+      rows. In that file "Payment Amount (Net Bank Received)" is ALSO invoice-row
+      cash on each row (and equals Allocated Amount), so using the last row as the
+      payment amount is wrong. Build the complete Payment Ref first, then derive
+      ONE bank payment amount for the reference.
+
+      Supported layouts:
+      1) Repeated bank amount on every row (e.g. 30,000 / 30,000 / 30,000):
+         use the single repeated bank amount.
+      2) Row cash equals Allocated Amount (the user's actual file):
+         sum the row cash/allocated amounts.
+      3) Allocated Amount is partially/fully blank:
+         if Payment Amount repeats, use the repeated amount; otherwise sum the
+         distinct row amounts only when the rows clearly represent row-level cash.
+    */
+    for(const r of rows){
+      let id=String(pick(r,['Payment Ref','Payment Reference','UTR','Transaction ID','Payment ID'])).trim();
+      if(!id)continue;
+
+      let group=ensure(String(pick(r,['Group','Client Group','Business Group'])||groupDefault).trim()||groupDefault);
+      let key=normKey(group)+'|'+normKey(id);
+      let refKey=normKey(id);
+      let client=String(pick(r,['Client','Client Name','Customer','Customer Name'])).trim();
+      let amount=n(pick(r,['Payment Amount','Payment Amount (Net Bank Received)','Payment Amount (Net)','Net Bank Received','Net Amount','Amount Received','Received Amount','Paid Amount','Receipt Amount','Amount']));
+      let date=dateVal(pick(r,['Date','Payment Date','Receipt Date']));
+      let type=String(pick(r,['Type','Payment Type'])||'Normal Payment').trim();
+      let inv=String(pick(r,['Invoice No','Invoice Number','Invoice'])).trim();
+      let allocated=n(pick(r,['Allocated Amount','Invoice Allocated Amount','Applied Amount']));
+      let gst=n(pick(r,['GST Hold','GST Hold Amount','GST Withheld']));
+      let gstRelease=n(pick(r,['GST Release','GST Released','GST Release Amount','Released GST']));
+      let creditNote=n(pick(r,['Credit Note Amount','Credit Note','Credit Note Value','CN Amount']));
+      let pen=n(pick(r,['Penalty','Penalty Amount']));
+      let shortPay=n(pick(r,['Short Payment','Short Pay','Short Amount']));
+      let tds=n(pick(r,['TDS','TDS Amount','TDS Deducted','Tax Deducted']));
+
+      if(!byRef[key])byRef[key]={
+        id,group,client,date,type,
+        rows:[],
+        amounts:[],
+        hasAllocated:false
+      };
+      let b=byRef[key];
+      b.rows.push({inv,allocated,rawAmount:amount,tds,gst:(/gst\s*release/i.test(type)||((gstRelease>0.009)&&(Math.abs(gst-gstRelease)<=0.009)))?0:gst,gstRelease,creditNote,pen,shortPay,isGstRelease:/gst\s*release/i.test(type)});
+      if(amount>0)b.amounts.push(amount);
+      if(allocated>0)b.hasAllocated=true;
+      if(client)b.client=client;
+      if(date)b.date=date;
+      if(type)b.type=type;
+    }
+
+    for(const key of Object.keys(byRef)){
+      let b=byRef[key], id=b.id, group=b.group;
+
+      let p=state.payments.find(x=>normKey(x.id)===refKey&&sameGroup(x.group,group));
+      let sameRefOtherGroup=state.payments.some(x=>normKey(x.id)===refKey&&!sameGroup(x.group,group));
+      if(!p&&sameRefOtherGroup){conflicts++;continue}
+
+      /*
+        Derive the ONE bank amount for this Payment Ref.
+        - If all row amounts are identical, that is the repeated payment total.
+        - If row amounts match their Allocated Amounts, they are row-level cash;
+          sum them.
+        - Otherwise, prefer the repeated value; for genuinely row-level varying
+          values, sum them.
+      */
+      let amounts=b.amounts;
+      let uniqueAmounts=[...new Set(amounts.map(v=>Math.round(v*100)/100))];
+      let rowAllocated=b.rows.map(x=>n(x.allocated));
+      let allocatedPresent=rowAllocated.some(v=>v>0.009);
+      let rowCashMatchesAllocated=allocatedPresent &&
+        b.rows.every(x=>n(x.allocated)<=0.009 || Math.abs(n(x.allocated)-n(x.rawAmount))<=0.01);
+
+      let paymentAmount=0;
+      if(!amounts.length){
+        paymentAmount=0;
+      }else if(uniqueAmounts.length===1){
+        paymentAmount=amounts[0];
+      }else if(rowCashMatchesAllocated && b.hasAllocated){
+        paymentAmount=rowAllocated.reduce((s,v)=>s+v,0);
+      }else{
+        /*
+          If the sheet has varying row amounts and no reliable repeated-bank
+          amount, treat them as row-level cash. This matches the user's actual
+          template where Payment Amount == Allocated Amount per invoice row.
+        */
+        paymentAmount=amounts.reduce((s,v)=>s+v,0);
+      }
+
+      if(!p){
+        p={
+          id,
+          group,
+          client:b.client||'',
+          date:b.date||'',
+          amount:paymentAmount,
+          type:b.type||'Normal Payment',
+          notes:'',
+          suggestedInvoices:[]
+        };
+        state.payments.push(p);added++;
+      }else{
+        updated++;
+        if(b.client)p.client=b.client;
+        if(b.date)p.date=b.date;
+        if(paymentAmount>=0)p.amount=paymentAmount;
+        if(b.type)p.type=b.type;
+      }
+
+      let grouped=new Map();
+      for(const x of b.rows){
+        if(!x.inv)continue;
+        let inv=findInvoice(x.inv,p.group);
+        if(!inv)continue;
+
+        let k=normKey(inv.no);
+        if(!grouped.has(k)){
+          grouped.set(k,{
+            inv,
+            allocated:0,
+            tds:0,
+            gst:0,
+            gstRelease:0,
+            creditNote:0,
+            pen:0,
+            shortPay:0,
+            hasExplicitAllocation:false,
+            isGstRelease:false
+          });
+        }
+        let g=grouped.get(k);
+        if(x.allocated>0){
+          g.allocated+=n(x.allocated);
+          g.hasExplicitAllocation=true;
+        }
+        g.tds+=n(x.tds);
+        g.gst+=n(x.gst);
+        g.gstRelease+=n(x.gstRelease);
+        g.isGstRelease = g.isGstRelease || !!x.isGstRelease;
+        g.creditNote+=n(x.creditNote);
+        g.pen+=n(x.pen);
+        g.shortPay+=n(x.shortPay);
+      }
+
+      let rebuilt=[],cashTotal=0,remainingCash=n(p.amount);
+
+      for(const g of grouped.values()){
+        let inv=g.inv;
+        let creditNote=Math.max(0,g.creditNote,n(inv.creditNote));
+        let effectiveShort=Math.max(0,g.shortPay-Math.min(creditNote,g.shortPay));
+        let deduction=g.tds+Math.max(0,g.gst-g.gstRelease)+g.pen+creditNote+effectiveShort;
+
+        /*
+          Explicit Allocated Amount is authoritative.
+          Deductions are NOT bank cash.
+        */
+        let cash;
+        // GST Release is the bank receipt for previously held GST, not cash allocation.
+        // Excel may repeat the same amount in Payment Amount and Allocated Amount;
+        // count it once as GST Release only.
+        const gstReleaseOnly = g.gstRelease>0.009 && (
+          g.isGstRelease || Math.abs(g.allocated-g.gstRelease)<=0.009
+        );
+        if(gstReleaseOnly){
+          cash=0;
+        }else if(g.hasExplicitAllocation){
+          cash=Math.max(0,g.allocated);
+        }else{
+          cash=Math.min(
+            remainingCash,
+            Math.max(0,invoiceTotal(inv)-deduction)
+          );
+        }
+
+        if(cash+deduction>invoiceTotal(inv)+0.009){
+          if(g.hasExplicitAllocation){
+            throw Error(`Payment ${p.id}, Invoice ${inv.no}: cash + deductions exceed invoice total.`);
+          }
+          cash=Math.max(0,invoiceTotal(inv)-deduction);
+        }
+
+        if(cash>0.009){
+          rebuilt.push({
+            paymentId:p.id,
+            invoiceNo:inv.no,
+            group:inv.group,
+            amount:cash,
+            tds:g.tds,
+            gstHold:g.gst,
+            gstRelease:g.gstRelease,
+            creditNote:g.creditNote,
+            penalty:g.pen,
+            shortPayment:g.shortPay
+          });
+          cashTotal+=cash;
+          remainingCash=Math.max(0,remainingCash-cash);
+        }else if(deduction>0.009 || g.gstRelease>0.009){
+          /*
+            Keep deduction-only information without creating fake cash payment.
+            This is important for GST Hold/TDS rows where bank cash is zero.
+          */
+          rebuilt.push({
+            paymentId:p.id,
+            invoiceNo:inv.no,
+            group:inv.group,
+            amount:0,
+            tds:g.tds,
+            gstHold:g.gst,
+            gstRelease:g.gstRelease,
+            creditNote:g.creditNote,
+            penalty:g.pen,
+            shortPayment:g.shortPay
+          });
+        }
+      }
+
+      if(cashTotal>n(p.amount)+0.009){
+        throw Error(
+          `Payment ${p.id}: invoice cash allocations (${fmt(cashTotal)}) exceed received bank amount (${fmt(p.amount)}).`
+        );
+      }
+
+      let oldRows=state.allocations.filter(a=>a.paymentId===p.id);
+      let importedInvoiceKeys=new Set(rebuilt.map(a=>normKey(a.invoiceNo)+'|'+normKey(a.group)));
+      let preservedOld=oldRows.filter(a=>!importedInvoiceKeys.has(normKey(a.invoiceNo)+'|'+normKey(a.group)));
+      state.allocations=state.allocations.filter(a=>a.paymentId!==p.id).concat(preservedOld,rebuilt);
+      allocUpdated+=Math.min(oldRows.length,rebuilt.length);
+      allocAdded+=Math.max(0,rebuilt.length-oldRows.length);
+      p.suggestedInvoices=[];
+    }
+
+    await resolveSuggestedAllocations();
+    await save();render();
+    $('pir').textContent=
+      `Payment import complete: ${added} new, ${updated} existing references updated, `+
+      `${allocAdded+allocUpdated} invoice allocations applied/updated. `+
+      `Each Payment Ref is stored once and its Excel invoice rows are allocated by Invoice No.`+
+      `${conflicts?` ${conflicts} skipped due to Payment Ref already existing in another group.`:''}`;
+    e.target.value='';
+  }catch(x){
+    $('pir').textContent='Payment import failed: '+x.message;
+  }
+}
+function resolveSuggestedAllocations(){for(const p of state.payments){if(n(p.amount)<=0.009)continue;let refs=Array.isArray(p.suggestedInvoices)?p.suggestedInvoices:[];if(!refs.length)continue;let used=paymentAllocations(p.id).reduce((s,a)=>s+n(a.amount),0);for(const ref of refs){let inv=findInvoice(ref,p.group);if(!inv)continue;if(state.allocations.some(a=>a.paymentId===p.id&&normKey(a.invoiceNo)===normKey(inv.no)&&sameGroup(a.group,inv.group)&&n(a.amount)>0.009))continue;let available=Math.max(0,n(p.amount)-used);if(available<=0)break;let need=invoiceMap(inv.no,inv.group).outstanding,cash=Math.min(available,need);if(cash>0){state.allocations.push({paymentId:p.id,invoiceNo:inv.no,group:inv.group,amount:cash,tds:0,gstHold:0,penalty:0,shortPayment:0});used+=cash}}}}
+function downloadTemplate(){if(demoBlock())return;const rows=[['Invoice No','Client','State','Invoice Date','Month','Basic','GST','Total','Credit Note Amount','Notes'],['INV-1001','Example Client','Delhi','2026-08-13','August 2026',100000,18000,118000,0,'Month controls report mapping; Invoice Date is for reference']];downloadXlsx(rows,'Invoices','reconciliation-invoice-template.xlsx')}
+function downloadPaymentTemplate(){if(demoBlock())return;const rows=[['Payment Ref','Client','Payment Date','Payment Amount (Net Bank Received)','Invoice No','Allocated Amount','TDS','GST Hold','GST Release','Credit Note Amount','Penalty','Short Payment','Type','Notes'],['PAY-1001','Example Client','2026-08-13',30000,'INV-1001',6000,500,0,0,0,0,0,'Normal Payment','Same Payment Ref can be repeated for multiple invoices'],['PAY-1001','Example Client','2026-08-13',30000,'INV-1002',5000,500,1000,0,0,0,0,'Normal Payment','GST Hold recorded separately'],['PAY-1001','Example Client','2026-08-13',30000,'INV-1003',7000,0,0,0,0,0,0,'Normal Payment',''],['PAY-1001','Example Client','2026-08-13',30000,'INV-1004',4000,500,0,0,0,500,0,'Normal Payment','Penalty recorded separately'],['PAY-1001','Example Client','2026-08-13',30000,'INV-1005',8000,0,0,0,0,0,0,'Normal Payment','Credit Note Amount is the total credit note including GST; enter it against the same Invoice No']];downloadXlsx(rows,'Payments','b-recon-payment-template.xlsx')}
+function downloadXlsx(rows,sheet,name){if(window.XLSX){const ws=XLSX.utils.aoa_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,sheet);XLSX.writeFile(wb,name)}else{const csv=rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\n'),b=new Blob([csv],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name.replace('.xlsx','.csv');a.click();URL.revokeObjectURL(a.href)}}
+function exportAllData(){if(demoBlock())return;
+  const rows=[['Type','Payment Ref','Invoice No','Group','Client','Date','Invoice Total','Cash Received','Allocated Cash','TDS','GST Hold','GST Release','Credit Note','Penalty','Short Payment','Outstanding','Invoice Status','Allocation Status']];
+  state.invoices.forEach(i=>{
+    const m=im(i.no,i.group), refs=invoiceMap(i.no,i.group).rows.map(a=>a.paymentId).join(' | ');
+    rows.push(['Invoice',refs,i.no,i.group,i.client,i.date,invoiceTotal(i),m.received,m.cash,m.tds,m.gstHold,m.gstRelease,m.creditNote,m.penaltyPaid,m.shortPayment,m.outstanding,invoiceStatusText(i.no,i.group),'']);
+  });
+  state.payments.forEach(p=>{
+    const m=pm(p.id);
+    rows.push(['Payment',p.id,'',p.group,p.client,p.date,'',p.amount,m.allocated,paymentTDS(p.id),'','','','','',m.unallocated,'',paymentStatus(p)]);
+  });
+  downloadCsv(rows,'b-recon-all-data.csv');
+}
+function backup(){if(demoBlock())return;let b=new Blob([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='reconciliation-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href)}
+async function restore(e){if(demoBlock())return;let f=e.target.files[0];if(!f)return;try{let x=JSON.parse(await f.text());if(!confirm('Replace current data with this backup?'))return;state={version:4,groups:x.groups||['Tata','Adani','Other'],invoices:x.invoices||[],payments:(x.payments||[]).map(p=>({...p,posted:!!p.posted,suggestedInvoices:p.suggestedInvoices||[]})),allocations:(x.allocations||[]).map(a=>({...a,amount:n(a.amount),tds:n(a.tds),gstHold:n(a.gstHold),gstRelease:n(a.gstRelease),creditNote:n(a.creditNote),penalty:n(a.penalty),shortPayment:n(a.shortPayment)}))};await save();render();toast('Backup restored')}catch(x){toast('Invalid backup file')}e.target.value=''}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.p).classList.add('active');render()});
+init();
+</script><div id="invoiceEditModal" class="invoice-modal" onclick="if(event.target===this)closeInvoiceEdit()"><div class="invoice-modal-card"><div class="invoice-modal-head"><h3 id="invoiceEditTitle">Edit Invoice</h3><button class="secondary" onclick="closeInvoiceEdit()">Close</button></div><div id="invoiceEditBody" class="invoice-modal-body"></div></div></div><div id="paymentModal" class="payment-modal" onclick="if(event.target===this)closePaymentInvoices()"><div class="payment-modal-card"><div class="payment-modal-head"><h3 id="paymentModalTitle">Payment</h3><button class="secondary" onclick="closePaymentInvoices()">Close</button></div><div id="paymentModalBody" class="payment-modal-body"></div></div></div></body></html>
