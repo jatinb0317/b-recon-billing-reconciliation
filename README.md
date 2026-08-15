@@ -99,31 +99,31 @@ Payment data can include:
 ## 📸 Screenshots
 
 ### Dashboard — Overview
-![Dashboard Overview](screenshots/Dashboard_1.png)
+![Dashboard Overview](Dashboard_1.png)
 
 ### Dashboard — Detailed View
-![Dashboard Detailed View](screenshots/Dashboard_2.png)
+![Dashboard Detailed View](Dashboard_2.png)
 
 ### Invoice Management
-![Invoice Management](screenshots/Invoice_1.png)
+![Invoice Management](Invoice_1.png)
 
 ### Invoice Details
-![Invoice Details](screenshots/Invoice_2.png)
+![Invoice Details](Invoice_2.png)
 
 ### Payment Management
-![Payment Management](screenshots/Payment_1.png)
+![Payment Management](Payment_1.png)
 
 ### Payment Allocation
-![Payment Allocation](screenshots/Allocate_1.png)
+![Payment Allocation](Allocate_1.png)
 
 ### Allocation Details
-![Allocation Details](screenshots/Allocate_2.png)
+![Allocation Details](Allocate_2.png)
 
 ### Reports
-![Reports](screenshots/Report_1.png)
+![Reports](Report_1.png)
 
 ### Detailed Report
-![Detailed Report](screenshots/Report_2.png)
+![Detailed Report](Report_2.png)
 
 ### Excel Import
-![Excel Import](screenshots/Excel_Import.png)
+![Excel Import](Excel_Import.png)
