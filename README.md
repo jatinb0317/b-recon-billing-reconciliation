@@ -93,3 +93,37 @@ Payment data can include:
 - GST Release
 - Penalty
 - Short Payment
+
+---
+  
+## 📸 Screenshots
+
+### Dashboard — Overview
+![Dashboard Overview](screenshots/Dashboard_1.png)
+
+### Dashboard — Detailed View
+![Dashboard Detailed View](screenshots/Dashboard_2.png)
+
+### Invoice Management
+![Invoice Management](screenshots/Invoice_1.png)
+
+### Invoice Details
+![Invoice Details](screenshots/Invoice_2.png)
+
+### Payment Management
+![Payment Management](screenshots/Payment_1.png)
+
+### Payment Allocation
+![Payment Allocation](screenshots/Allocate_1.png)
+
+### Allocation Details
+![Allocation Details](screenshots/Allocate_2.png)
+
+### Reports
+![Reports](screenshots/Report_1.png)
+
+### Detailed Report
+![Detailed Report](screenshots/Report_2.png)
+
+### Excel Import
+![Excel Import](screenshots/Excel_Import.png)
